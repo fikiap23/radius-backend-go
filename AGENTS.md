@@ -27,6 +27,7 @@ domain ← application ← infrastructure ← interface
 | GORM models in `infrastructure/db/postgres/models.go` only | GORM tags in `domain/entities` |
 | Manual DI in `module.go` + `bootstrap/` | wire/fx without approval |
 | Service method + entity as default | Premature command/query/mapper layers |
+| Repository fields named `{model}Repo` (e.g. `userRepo`) | Ambiguous names like `users` for a repository |
 
 ### Stack
 

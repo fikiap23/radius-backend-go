@@ -11,16 +11,16 @@ import (
 )
 
 type UserService struct {
-	users  repositories.UserRepository
-	logger *zap.Logger
+	userRepo repositories.UserRepository
+	logger   *zap.Logger
 }
 
-func NewUserService(users repositories.UserRepository, logger *zap.Logger) *UserService {
-	return &UserService{users: users, logger: logger}
+func NewUserService(userRepo repositories.UserRepository, logger *zap.Logger) *UserService {
+	return &UserService{userRepo: userRepo, logger: logger}
 }
 
 func (s *UserService) GetMe(ctx context.Context, userID string) (*entities.UserProfile, error) {
-	user, err := s.users.FindByID(ctx, userID)
+	user, err := s.userRepo.FindByID(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("get me: %w", err)
 	}
@@ -30,7 +30,7 @@ func (s *UserService) GetMe(ctx context.Context, userID string) (*entities.UserP
 }
 
 func (s *UserService) UpdateMe(ctx context.Context, userID string, input entities.UpdateProfileInput) (*entities.UserProfile, error) {
-	user, err := s.users.FindByID(ctx, userID)
+	user, err := s.userRepo.FindByID(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("find user: %w", err)
 	}
@@ -48,11 +48,11 @@ func (s *UserService) UpdateMe(ctx context.Context, userID string, input entitie
 		user.Locale = *input.Locale
 	}
 
-	if err := s.users.Update(ctx, user); err != nil {
+	if err := s.userRepo.Update(ctx, user); err != nil {
 		return nil, fmt.Errorf("update user: %w", err)
 	}
 
-	updated, err := s.users.FindByID(ctx, userID)
+	updated, err := s.userRepo.FindByID(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("reload user: %w", err)
 	}

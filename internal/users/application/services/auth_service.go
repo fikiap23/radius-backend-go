@@ -26,19 +26,19 @@ type AuthResult struct {
 }
 
 type AuthService struct {
-	users  repositories.UserRepository
-	cfg    config.JWTConfig
-	logger *zap.Logger
+	userRepo repositories.UserRepository
+	cfg      config.JWTConfig
+	logger   *zap.Logger
 }
 
-func NewAuthService(users repositories.UserRepository, cfg config.JWTConfig, logger *zap.Logger) *AuthService {
-	return &AuthService{users: users, cfg: cfg, logger: logger}
+func NewAuthService(userRepo repositories.UserRepository, cfg config.JWTConfig, logger *zap.Logger) *AuthService {
+	return &AuthService{userRepo: userRepo, cfg: cfg, logger: logger}
 }
 
 func (s *AuthService) Register(ctx context.Context, in appdto.RegisterInput) (*AuthResult, error) {
 	email := strings.TrimSpace(strings.ToLower(in.Body.Email))
 
-	exists, err := s.users.ExistsByEmail(ctx, email)
+	exists, err := s.userRepo.ExistsByEmail(ctx, email)
 	if err != nil {
 		return nil, fmt.Errorf("check email exists: %w", err)
 	}
@@ -60,7 +60,7 @@ func (s *AuthService) Register(ctx context.Context, in appdto.RegisterInput) (*A
 		Locale:       "en",
 	}
 
-	if err := s.users.Create(ctx, user); err != nil {
+	if err := s.userRepo.Create(ctx, user); err != nil {
 		return nil, fmt.Errorf("create user: %w", err)
 	}
 
@@ -70,7 +70,7 @@ func (s *AuthService) Register(ctx context.Context, in appdto.RegisterInput) (*A
 func (s *AuthService) Login(ctx context.Context, in appdto.LoginInput) (*AuthResult, error) {
 	email := strings.TrimSpace(strings.ToLower(in.Body.Email))
 
-	user, err := s.users.FindByEmail(ctx, email)
+	user, err := s.userRepo.FindByEmail(ctx, email)
 	if err != nil {
 		if errors.Is(err, domain.ErrUserNotFound) {
 			return nil, domain.ErrInvalidCredentials
@@ -87,7 +87,7 @@ func (s *AuthService) Login(ctx context.Context, in appdto.LoginInput) (*AuthRes
 	}
 
 	now := time.Now().UTC()
-	if err := s.users.UpdateLastLogin(ctx, user.ID, now); err != nil {
+	if err := s.userRepo.UpdateLastLogin(ctx, user.ID, now); err != nil {
 		return nil, fmt.Errorf("update last login: %w", err)
 	}
 	user.LastLoginAt = &now
