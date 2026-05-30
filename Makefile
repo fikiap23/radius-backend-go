@@ -1,4 +1,4 @@
-.PHONY: help build run test tidy fmt up down restart logs exec migrate swagger clean
+.PHONY: help build run test tidy fmt up down restart logs exec migrate clean
 
 MAIN          := ./cmd/api
 BINARY        := bin/radius-backend
@@ -24,7 +24,6 @@ help:
 	@echo "  make logs           - Follow app container logs"
 	@echo "  make exec           - Shell into app container"
 	@echo "  make migrate        - Run golang-migrate up"
-	@echo "  make swagger        - Regenerate OpenAPI docs (swag init)"
 	@echo ""
 	@echo "  make clean          - Remove build artifacts"
 
@@ -64,9 +63,6 @@ exec:
 
 migrate:
 	$(COMPOSE) run --rm migrate
-
-swagger:
-	swag init -g cmd/api/main.go -o docs --parseInternal --parseDependency
 
 clean:
 	rm -rf bin tmp

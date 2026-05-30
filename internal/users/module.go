@@ -3,10 +3,12 @@ package users
 import (
 	"context"
 
+	"github.com/danielgtaylor/huma/v2/adapters/humaecho"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/radius/radius-backend/internal/module"
 	"github.com/radius/radius-backend/internal/shared/httplog"
+	"github.com/radius/radius-backend/internal/shared/humaapi"
 	appmiddleware "github.com/radius/radius-backend/internal/shared/middleware"
 	"github.com/radius/radius-backend/internal/users/application/services"
 	"github.com/radius/radius-backend/internal/users/infrastructure/db/postgres"
@@ -45,9 +47,11 @@ func (m *Module) RegisterHTTP(e *echo.Echo, deps module.Dependencies, auth *appm
 		middleware.RequestID(),
 	)
 
-	rest.NewHealthController(e)
-	rest.NewAuthController(e, m.authSvc, deps.Logger)
-	rest.NewUserController(e, m.userSvc, auth, deps.Logger)
+	api := humaecho.New(e, humaapi.NewConfig(deps.Config))
+
+	rest.RegisterHealth(api)
+	rest.RegisterAuth(api, m.authSvc, deps.Logger)
+	rest.RegisterUsers(api, m.userSvc, auth, deps.Logger)
 }
 
 func (m *Module) StartMessaging(_ context.Context, _ module.Dependencies) (func(), error) {

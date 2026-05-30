@@ -1,24 +1,23 @@
 package rest
 
 import (
+	"context"
 	"net/http"
 
-	"github.com/labstack/echo/v4"
+	"github.com/danielgtaylor/huma/v2"
+	"github.com/radius/radius-backend/internal/shared/humaapi"
 )
 
-type HealthController struct{}
-
-func NewHealthController(e *echo.Echo) *HealthController {
-	e.GET("/health", health)
-	return &HealthController{}
-}
-
-// health godoc
-// @Summary      Health check
-// @Tags         system
-// @Produce      json
-// @Success      200  {object}  SwaggerHealthOK
-// @Router       /health [get]
-func health(c echo.Context) error {
-	return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
+func RegisterHealth(api huma.API) {
+	huma.Register(api, huma.Operation{
+		OperationID: "health",
+		Method:      http.MethodGet,
+		Path:        "/health",
+		Summary:     "Health check",
+		Tags:        []string{"system"},
+	}, func(_ context.Context, _ *struct{}) (*humaapi.HealthOutput, error) {
+		out := &humaapi.HealthOutput{}
+		out.Body.Status = "ok"
+		return out, nil
+	})
 }

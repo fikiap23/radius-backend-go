@@ -9,27 +9,15 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
 	"github.com/radius/radius-backend/internal/module"
 	"github.com/radius/radius-backend/internal/shared/config"
 	"github.com/radius/radius-backend/internal/shared/database"
 	"github.com/radius/radius-backend/internal/shared/middleware"
-	appswagger "github.com/radius/radius-backend/internal/shared/swagger"
 	"github.com/radius/radius-backend/internal/users"
-
-	_ "github.com/radius/radius-backend/docs"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
-
-type requestValidator struct {
-	v *validator.Validate
-}
-
-func (rv *requestValidator) Validate(i interface{}) error {
-	return rv.v.Struct(i)
-}
 
 func Run() error {
 	cfg, err := config.Load()
@@ -63,8 +51,6 @@ func Run() error {
 	e := echo.New()
 	e.HideBanner = true
 	e.HidePort = true
-	e.Validator = &requestValidator{v: validator.New()}
-	appswagger.Register(e)
 
 	contexts := []module.BoundedContext{
 		users.NewModule(),

@@ -7,7 +7,6 @@ RUN apk add --no-cache git curl make
 
 RUN go install github.com/air-verse/air@latest
 RUN go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
-RUN go install github.com/swaggo/swag/cmd/swag@latest
 
 RUN git config --global --add safe.directory /app
 

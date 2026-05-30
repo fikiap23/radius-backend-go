@@ -36,22 +36,33 @@ func NewAuthMiddleware(secretKey string, logger *zap.Logger) *AuthMiddleware {
 func (m *AuthMiddleware) Authenticate() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
-			token, err := m.extractToken(c.Request().Header.Get("Authorization"))
+			token, err := m.ExtractBearerToken(c.Request().Header.Get("Authorization"))
 			if err != nil {
 				return echo.NewHTTPError(http.StatusUnauthorized, "missing or malformed token")
 			}
 
-			claims, err := m.validateToken(token)
-			if err != nil {
+			if err := m.SetUserOnContext(c, token); err != nil {
 				m.logger.Warn("invalid token", zap.Error(err))
 				return echo.NewHTTPError(http.StatusUnauthorized, "invalid or expired token")
 			}
 
-			c.Set(claimsKey, claims)
-			c.Set(userIDKey, claims.Subject)
 			return next(c)
 		}
 	}
+}
+
+func (m *AuthMiddleware) ExtractBearerToken(authHeader string) (string, error) {
+	return m.extractToken(authHeader)
+}
+
+func (m *AuthMiddleware) SetUserOnContext(c echo.Context, token string) error {
+	claims, err := m.validateToken(token)
+	if err != nil {
+		return err
+	}
+	c.Set(claimsKey, claims)
+	c.Set(userIDKey, claims.Subject)
+	return nil
 }
 
 func (m *AuthMiddleware) extractToken(authHeader string) (string, error) {

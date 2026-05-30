@@ -18,13 +18,12 @@ make up
 
 API runs at `http://localhost:8080`.
 
-Swagger UI: `http://localhost:8080/swagger/index.html`
+API docs (Huma, code-first OpenAPI 3.1):
 
-Regenerate docs after changing handler annotations:
+- Interactive docs: `http://localhost:8080/docs`
+- OpenAPI spec: `http://localhost:8080/openapi.yaml` (also `/openapi.json`)
 
-```bash
-make swagger
-```
+Docs are generated at runtime from handler structs; no separate generate step. In `production` env, `/docs` and `/openapi` are disabled.
 
 ## Endpoints
 
@@ -55,7 +54,7 @@ internal/
   bootstrap/          App lifecycle
   module/             BoundedContext interface
   users/              Auth & users bounded context
-  shared/             Config, DB, middleware, response
+  shared/             Config, DB, middleware, humaapi, response
 migrations/           SQL migrations
 build/                Docker & env files
 configs/              Sample YAML config

@@ -1,10 +1,11 @@
 package rest
 
 import (
+	"context"
 	"net/http"
 
-	"github.com/labstack/echo/v4"
-	"github.com/radius/radius-backend/internal/shared/apirest"
+	"github.com/danielgtaylor/huma/v2"
+	"github.com/radius/radius-backend/internal/shared/humaapi"
 	appmiddleware "github.com/radius/radius-backend/internal/shared/middleware"
 	"github.com/radius/radius-backend/internal/users/application/services"
 	"github.com/radius/radius-backend/internal/users/domain"
@@ -12,92 +13,69 @@ import (
 	"go.uber.org/zap"
 )
 
-type UserController struct {
-	service *services.UserService
-	logger  *zap.Logger
+type updateMeInput struct {
+	Body struct {
+		Name      *string `json:"name,omitempty" doc:"Display name" minLength:"2" maxLength:"255"`
+		AvatarURL *string `json:"avatarUrl,omitempty" doc:"Avatar URL" format:"uri"`
+		Timezone  *string `json:"timezone,omitempty" doc:"IANA timezone" maxLength:"64"`
+		Locale    *string `json:"locale,omitempty" doc:"Locale code" minLength:"2" maxLength:"10"`
+	}
 }
 
-type UpdateMeRequest struct {
-	Name      *string `json:"name" validate:"omitempty,min=2,max=255"`
-	AvatarURL *string `json:"avatarUrl" validate:"omitempty,url"`
-	Timezone  *string `json:"timezone" validate:"omitempty,max=64"`
-	Locale    *string `json:"locale" validate:"omitempty,min=2,max=10"`
-}
-
-var userErrors = []apirest.ErrorMapping{
+var userErrors = []humaapi.ErrorMapping{
 	{Err: domain.ErrUserNotFound, Status: http.StatusNotFound, Message: "USER_NOT_FOUND"},
 }
 
-func NewUserController(e *echo.Echo, service *services.UserService, auth *appmiddleware.AuthMiddleware, logger *zap.Logger) *UserController {
-	c := &UserController{service: service, logger: logger}
+func RegisterUsers(api huma.API, service *services.UserService, auth *appmiddleware.AuthMiddleware, logger *zap.Logger) {
+	authMW := humaapi.RequireAuth(auth, api)
 
-	v1 := e.Group("/v1")
-	users := v1.Group("/users", auth.Authenticate())
-	users.GET("/me", c.GetMe)
-	users.PATCH("/me", c.UpdateMe)
+	huma.Register(api, huma.Operation{
+		OperationID: "users-get-me",
+		Method:      http.MethodGet,
+		Path:        "/v1/users/me",
+		Summary:     "Get current user profile",
+		Tags:        []string{"users"},
+		Security:    humaapi.BearerSecurity(),
+		Middlewares: huma.Middlewares{authMW},
+	}, func(ctx context.Context, _ *struct{}) (*humaapi.OKOutput, error) {
+		userID, err := humaapi.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, err
+		}
 
-	return c
+		profile, err := service.GetMe(ctx, userID)
+		if err != nil {
+			return nil, humaapi.MapError(err, userErrors, logger)
+		}
+		return humaapi.OK(profile), nil
+	})
+
+	huma.Register(api, huma.Operation{
+		OperationID: "users-update-me",
+		Method:      http.MethodPatch,
+		Path:        "/v1/users/me",
+		Summary:     "Update current user profile",
+		Tags:        []string{"users"},
+		Security:    humaapi.BearerSecurity(),
+		Middlewares: huma.Middlewares{authMW},
+	}, func(ctx context.Context, in *updateMeInput) (*humaapi.OKOutput, error) {
+		userID, err := humaapi.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		input := entities.UpdateProfileInput{
+			Name:      in.Body.Name,
+			AvatarURL: in.Body.AvatarURL,
+			Timezone:  in.Body.Timezone,
+			Locale:    in.Body.Locale,
+		}
+
+		profile, err := service.UpdateMe(ctx, userID, input)
+		if err != nil {
+			return nil, humaapi.MapError(err, userErrors, logger)
+		}
+		return humaapi.OK(profile), nil
+	})
 }
 
-// GetMe godoc
-// @Summary      Get current user profile
-// @Tags         users
-// @Produce      json
-// @Security     BearerAuth
-// @Success      200  {object}  SwaggerUserOK
-// @Failure      401  {object}  SwaggerErr
-// @Failure      404  {object}  SwaggerErr
-// @Failure      500  {object}  SwaggerErr
-// @Router       /v1/users/me [get]
-func (c *UserController) GetMe(ctx echo.Context) error {
-	userID, err := apirest.UserID(ctx)
-	if err != nil {
-		return apirest.Unauthorized(ctx)
-	}
-
-	profile, err := c.service.GetMe(ctx.Request().Context(), userID)
-	if err != nil {
-		return apirest.Handle(ctx, err, userErrors, c.logger)
-	}
-
-	return apirest.OK(ctx, profile)
-}
-
-// UpdateMe godoc
-// @Summary      Update current user profile
-// @Tags         users
-// @Accept       json
-// @Produce      json
-// @Security     BearerAuth
-// @Param        body  body      UpdateMeRequest  true  "Profile fields to update"
-// @Success      200   {object}  SwaggerUserOK
-// @Failure      400   {object}  SwaggerErr
-// @Failure      401   {object}  SwaggerErr
-// @Failure      404   {object}  SwaggerErr
-// @Failure      500   {object}  SwaggerErr
-// @Router       /v1/users/me [patch]
-func (c *UserController) UpdateMe(ctx echo.Context) error {
-	userID, err := apirest.UserID(ctx)
-	if err != nil {
-		return apirest.Unauthorized(ctx)
-	}
-
-	req, err := apirest.Bind[UpdateMeRequest](ctx)
-	if err != nil {
-		return apirest.BindErr(ctx, err)
-	}
-
-	input := entities.UpdateProfileInput{
-		Name:      req.Name,
-		AvatarURL: req.AvatarURL,
-		Timezone:  req.Timezone,
-		Locale:    req.Locale,
-	}
-
-	profile, err := c.service.UpdateMe(ctx.Request().Context(), userID, input)
-	if err != nil {
-		return apirest.Handle(ctx, err, userErrors, c.logger)
-	}
-
-	return apirest.OK(ctx, profile)
-}

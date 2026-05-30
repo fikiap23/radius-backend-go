@@ -1,13 +1,3 @@
-// @title           Radius Backend API
-// @version         1.0
-// @description     Radius monolith API — auth and users.
-// @host            localhost:8080
-// @BasePath        /
-//
-// @securityDefinitions.apikey BearerAuth
-// @in              header
-// @name            Authorization
-// @description     JWT token. Format: Bearer {token}
 package main
 
 import (

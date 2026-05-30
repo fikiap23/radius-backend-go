@@ -38,7 +38,7 @@ domain ← application ← infrastructure ← interface
 | Auth | golang-jwt/jwt/v5 + bcrypt |
 | Logging | uber/zap |
 | Migrations | golang-migrate SQL (not AutoMigrate in prod) |
-| API docs | swaggo/swag + echo-swagger at `/swagger/*` |
+| API docs | Huma v2 + humaecho — OpenAPI 3.1 at `/openapi.yaml`, UI at `/docs` (disabled in production) |
 
 ### Files & locations
 
@@ -72,6 +72,6 @@ Auth header: `Authorization: Bearer <token>`
 
 ## 5. Makefile
 
-Prefer `make up`, `make migrate`, `make swagger`, `make run` over ad-hoc docker commands.
+Prefer `make up`, `make migrate`, `make run` over ad-hoc docker commands.
 
-New HTTP handlers: use `internal/shared/apirest` helpers (`Bind`, `OK`, `Created`, `Handle`) and reuse `SwaggerErr`, `SwaggerAuthOK`, etc. from `rest/swagger_types.go`.
+New HTTP operations: register with `huma.Register` in `interface/api/rest`, use input/output structs with `json` and constraint tags (`minLength`, `format`, etc.), and reuse `internal/shared/humaapi` envelope helpers (`OK`, `Created`, `MapError`, `RequireAuth`).
