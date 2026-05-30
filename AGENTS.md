@@ -74,4 +74,4 @@ Auth header: `Authorization: Bearer <token>`
 
 Prefer `make up`, `make migrate`, `make run` over ad-hoc docker commands.
 
-New HTTP operations: register with `huma.Register` in `interface/api/rest`, use input/output structs with `json` and constraint tags (`minLength`, `format`, etc.), and reuse `internal/shared/humaapi` envelope helpers (`OK`, `Created`, `MapError`, `RequireAuth`).
+New HTTP operations: register with `huma.Register` in `interface/api/rest`. Request/response types live in `application/dto` (shared by Huma handlers and services; include `json` / constraint tags for OpenAPI). Map to domain types only when shapes differ (e.g. `UpdateMeInput.ToDomain()`). Reuse `internal/shared/humaapi` for envelope responses.

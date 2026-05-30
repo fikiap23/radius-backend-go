@@ -10,6 +10,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/radius/radius-backend/internal/shared/config"
+	appdto "github.com/radius/radius-backend/internal/users/application/dto"
 	"github.com/radius/radius-backend/internal/users/domain"
 	"github.com/radius/radius-backend/internal/users/domain/entities"
 	"github.com/radius/radius-backend/internal/users/domain/repositories"
@@ -34,8 +35,8 @@ func NewAuthService(users repositories.UserRepository, cfg config.JWTConfig, log
 	return &AuthService{users: users, cfg: cfg, logger: logger}
 }
 
-func (s *AuthService) Register(ctx context.Context, name, email, password string) (*AuthResult, error) {
-	email = strings.TrimSpace(strings.ToLower(email))
+func (s *AuthService) Register(ctx context.Context, in appdto.RegisterInput) (*AuthResult, error) {
+	email := strings.TrimSpace(strings.ToLower(in.Body.Email))
 
 	exists, err := s.users.ExistsByEmail(ctx, email)
 	if err != nil {
@@ -45,7 +46,7 @@ func (s *AuthService) Register(ctx context.Context, name, email, password string
 		return nil, domain.ErrEmailAlreadyExists
 	}
 
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	hash, err := bcrypt.GenerateFromPassword([]byte(in.Body.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, fmt.Errorf("hash password: %w", err)
 	}
@@ -53,7 +54,7 @@ func (s *AuthService) Register(ctx context.Context, name, email, password string
 
 	user := &entities.User{
 		ID:           uuid.NewString(),
-		Name:         name,
+		Name:         in.Body.Name,
 		Email:        email,
 		PasswordHash: &hashStr,
 		Locale:       "en",
@@ -66,8 +67,8 @@ func (s *AuthService) Register(ctx context.Context, name, email, password string
 	return s.buildAuthResult(user)
 }
 
-func (s *AuthService) Login(ctx context.Context, email, password string) (*AuthResult, error) {
-	email = strings.TrimSpace(strings.ToLower(email))
+func (s *AuthService) Login(ctx context.Context, in appdto.LoginInput) (*AuthResult, error) {
+	email := strings.TrimSpace(strings.ToLower(in.Body.Email))
 
 	user, err := s.users.FindByEmail(ctx, email)
 	if err != nil {
@@ -81,7 +82,7 @@ func (s *AuthService) Login(ctx context.Context, email, password string) (*AuthR
 		return nil, domain.ErrInvalidCredentials
 	}
 
-	if err := bcrypt.CompareHashAndPassword([]byte(*user.PasswordHash), []byte(password)); err != nil {
+	if err := bcrypt.CompareHashAndPassword([]byte(*user.PasswordHash), []byte(in.Body.Password)); err != nil {
 		return nil, domain.ErrInvalidCredentials
 	}
 

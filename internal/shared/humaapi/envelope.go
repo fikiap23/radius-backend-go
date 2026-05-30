@@ -16,12 +16,6 @@ func OKBody(data any) envelopeBody {
 	}
 }
 
-type HealthOutput struct {
-	Body struct {
-		Status string `json:"status" example:"ok"`
-	}
-}
-
 type OKOutput struct {
 	Body envelopeBody
 }

@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/danielgtaylor/huma/v2"
-	"github.com/radius/radius-backend/internal/shared/humaapi"
+	"github.com/radius/radius-backend/internal/users/application/dto"
 )
 
 func RegisterHealth(api huma.API) {
@@ -15,8 +15,8 @@ func RegisterHealth(api huma.API) {
 		Path:        "/health",
 		Summary:     "Health check",
 		Tags:        []string{"system"},
-	}, func(_ context.Context, _ *struct{}) (*humaapi.HealthOutput, error) {
-		out := &humaapi.HealthOutput{}
+	}, func(_ context.Context, _ *struct{}) (*dto.HealthOutput, error) {
+		out := &dto.HealthOutput{}
 		out.Body.Status = "ok"
 		return out, nil
 	})

@@ -53,7 +53,7 @@ cmd/api/              Entry point
 internal/
   bootstrap/          App lifecycle
   module/             BoundedContext interface
-  users/              Auth & users bounded context
+  users/              Auth & users (dto + rest handlers)
   shared/             Config, DB, middleware, humaapi, response
 migrations/           SQL migrations
 build/                Docker & env files
