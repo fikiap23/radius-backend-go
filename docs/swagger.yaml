@@ -1,0 +1,269 @@
+basePath: /
+definitions:
+  github_com_radius_radius-backend_internal_shared_swagger.AuthData:
+    properties:
+      accessToken:
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        type: string
+      expiresIn:
+        example: 604800
+        type: integer
+      tokenType:
+        example: Bearer
+        type: string
+      user:
+        $ref: '#/definitions/github_com_radius_radius-backend_internal_shared_swagger.UserData'
+    type: object
+  github_com_radius_radius-backend_internal_shared_swagger.UserData:
+    properties:
+      email:
+        example: jane@example.com
+        type: string
+      id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      locale:
+        example: en
+        type: string
+      name:
+        example: Jane Doe
+        type: string
+    type: object
+  internal_users_interface_api_rest.LoginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        maxLength: 72
+        minLength: 8
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  internal_users_interface_api_rest.RegisterRequest:
+    properties:
+      email:
+        type: string
+      name:
+        maxLength: 255
+        minLength: 2
+        type: string
+      password:
+        maxLength: 72
+        minLength: 8
+        type: string
+    required:
+    - email
+    - name
+    - password
+    type: object
+  internal_users_interface_api_rest.SwaggerAuthOK:
+    properties:
+      data:
+        $ref: '#/definitions/github_com_radius_radius-backend_internal_shared_swagger.AuthData'
+      isSuccess:
+        example: true
+        type: boolean
+      message:
+        example: OK
+        type: string
+    type: object
+  internal_users_interface_api_rest.SwaggerErr:
+    properties:
+      isSuccess:
+        example: false
+        type: boolean
+      message:
+        example: VALIDATION_ERROR
+        type: string
+    type: object
+  internal_users_interface_api_rest.SwaggerHealthOK:
+    properties:
+      status:
+        example: ok
+        type: string
+    type: object
+  internal_users_interface_api_rest.SwaggerUserOK:
+    properties:
+      data:
+        $ref: '#/definitions/github_com_radius_radius-backend_internal_shared_swagger.UserData'
+      isSuccess:
+        example: true
+        type: boolean
+      message:
+        example: OK
+        type: string
+    type: object
+  internal_users_interface_api_rest.UpdateMeRequest:
+    properties:
+      avatarUrl:
+        type: string
+      locale:
+        maxLength: 10
+        minLength: 2
+        type: string
+      name:
+        maxLength: 255
+        minLength: 2
+        type: string
+      timezone:
+        maxLength: 64
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: Radius monolith API — auth and users.
+  title: Radius Backend API
+  version: "1.0"
+paths:
+  /health:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_users_interface_api_rest.SwaggerHealthOK'
+      summary: Health check
+      tags:
+      - system
+  /v1/auth/login:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Login payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_users_interface_api_rest.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_users_interface_api_rest.SwaggerAuthOK'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_users_interface_api_rest.SwaggerErr'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_users_interface_api_rest.SwaggerErr'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_users_interface_api_rest.SwaggerErr'
+      summary: Login
+      tags:
+      - auth
+  /v1/auth/register:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Register payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_users_interface_api_rest.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_users_interface_api_rest.SwaggerAuthOK'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_users_interface_api_rest.SwaggerErr'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/internal_users_interface_api_rest.SwaggerErr'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_users_interface_api_rest.SwaggerErr'
+      summary: Register user
+      tags:
+      - auth
+  /v1/users/me:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_users_interface_api_rest.SwaggerUserOK'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_users_interface_api_rest.SwaggerErr'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_users_interface_api_rest.SwaggerErr'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_users_interface_api_rest.SwaggerErr'
+      security:
+      - BearerAuth: []
+      summary: Get current user profile
+      tags:
+      - users
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Profile fields to update
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_users_interface_api_rest.UpdateMeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_users_interface_api_rest.SwaggerUserOK'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_users_interface_api_rest.SwaggerErr'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_users_interface_api_rest.SwaggerErr'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_users_interface_api_rest.SwaggerErr'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_users_interface_api_rest.SwaggerErr'
+      security:
+      - BearerAuth: []
+      summary: Update current user profile
+      tags:
+      - users
+securityDefinitions:
+  BearerAuth:
+    description: 'JWT token. Format: Bearer {token}'
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

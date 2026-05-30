@@ -1,0 +1,72 @@
+name: radius-backend-dev
+
+services:
+
+  app:
+    build:
+      context: ..
+      dockerfile: build/Dockerfile
+    container_name: radius-app
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "${HTTP_PORT:-8080}:8080"
+    volumes:
+      - ..:/app
+      - go-pkg-cache:/go/pkg
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    networks:
+      - radius-network
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: radius-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-radius}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-radius}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - radius-network
+
+  migrate:
+    build:
+      context: ..
+      dockerfile: build/Dockerfile
+    container_name: radius-migrate
+    env_file: .env
+    volumes:
+      - ..:/app
+    command: >
+      migrate
+        -path /app/migrations
+        -database "postgres://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@postgres:5432/${DB_NAME:-radius}?sslmode=disable"
+        up
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - radius-network
+    restart: "no"
+
+volumes:
+  postgres-data:
+  go-pkg-cache:
+
+networks:
+  radius-network:
+    driver: bridge

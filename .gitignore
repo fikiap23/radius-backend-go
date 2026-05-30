@@ -1,0 +1,7 @@
+bin/
+tmp/
+*.log
+build/.env
+build/.env.production
+config.yaml
+.DS_Store

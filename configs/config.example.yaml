@@ -1,0 +1,26 @@
+app:
+  name: radius-backend
+  env: development
+  loglevel: info
+
+http:
+  port: 8080
+  readtimeout: 15s
+  writetimeout: 15s
+  shutdowntimeout: 30s
+
+database:
+  host: localhost
+  port: 5432
+  user: postgres
+  password: secret
+  name: radius
+  sslmode: disable
+  maxopenconns: 25
+  maxidleconns: 10
+  connmaxlifetime: 5m
+
+jwt:
+  secretkey: change-me-to-a-strong-secret
+  issuer: radius-backend
+  expiry: 24h
