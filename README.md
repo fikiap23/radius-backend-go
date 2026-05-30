@@ -30,10 +30,10 @@ Docs are generated at runtime from handler structs; no separate generate step. I
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
 | GET | `/health` | No | Liveness |
-| POST | `/v1/auth/register` | No | Register user |
-| POST | `/v1/auth/login` | No | Login |
-| GET | `/v1/users/me` | JWT | Current user profile |
-| PATCH | `/v1/users/me` | JWT | Update profile |
+| POST | `/auth/register` | No | Register user |
+| POST | `/auth/login` | No | Login |
+| GET | `/users/me` | JWT | Current user profile |
+| PATCH | `/users/me` | JWT | Update profile |
 
 ## Local Run (without Docker)
 

@@ -21,12 +21,12 @@ func RegisterAuth(api huma.API, service *services.AuthService, logger *zap.Logge
 	huma.Register(api, huma.Operation{
 		OperationID:   "auth-register",
 		Method:        http.MethodPost,
-		Path:          "/v1/auth/register",
+		Path:          "/auth/register",
 		Summary:       "Register user",
 		Tags:          []string{"auth"},
 		DefaultStatus: http.StatusCreated,
 	}, func(ctx context.Context, in *dto.RegisterInput) (*humaapi.CreatedOutput, error) {
-		result, err := service.Register(ctx, *in)
+		result, err := service.HandleRegister(ctx, *in)
 		if err != nil {
 			return nil, humaapi.MapError(err, authErrors, logger)
 		}
@@ -36,11 +36,11 @@ func RegisterAuth(api huma.API, service *services.AuthService, logger *zap.Logge
 	huma.Register(api, huma.Operation{
 		OperationID: "auth-login",
 		Method:      http.MethodPost,
-		Path:        "/v1/auth/login",
+		Path:        "/auth/login",
 		Summary:     "Login",
 		Tags:        []string{"auth"},
 	}, func(ctx context.Context, in *dto.LoginInput) (*humaapi.OKOutput, error) {
-		result, err := service.Login(ctx, *in)
+		result, err := service.HandleLogin(ctx, *in)
 		if err != nil {
 			return nil, humaapi.MapError(err, authErrors, logger)
 		}

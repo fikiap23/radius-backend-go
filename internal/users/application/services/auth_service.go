@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/radius/radius-backend/internal/shared/config"
+	appjwt "github.com/radius/radius-backend/internal/shared/jwt"
 	appdto "github.com/radius/radius-backend/internal/users/application/dto"
 	"github.com/radius/radius-backend/internal/users/domain"
 	"github.com/radius/radius-backend/internal/users/domain/entities"
@@ -19,10 +19,10 @@ import (
 )
 
 type AuthResult struct {
-	AccessToken string                `json:"accessToken"`
-	TokenType   string                `json:"tokenType"`
-	ExpiresIn   int64                 `json:"expiresIn"`
-	User        entities.UserProfile  `json:"user"`
+	AccessToken string               `json:"accessToken"`
+	TokenType   string               `json:"tokenType"`
+	ExpiresIn   int64                `json:"expiresIn"`
+	User        entities.UserProfile `json:"user"`
 }
 
 type AuthService struct {
@@ -35,7 +35,7 @@ func NewAuthService(userRepo repositories.UserRepository, cfg config.JWTConfig, 
 	return &AuthService{userRepo: userRepo, cfg: cfg, logger: logger}
 }
 
-func (s *AuthService) Register(ctx context.Context, in appdto.RegisterInput) (*AuthResult, error) {
+func (s *AuthService) HandleRegister(ctx context.Context, in appdto.RegisterInput) (*AuthResult, error) {
 	email := strings.TrimSpace(strings.ToLower(in.Body.Email))
 
 	exists, err := s.userRepo.ExistsByEmail(ctx, email)
@@ -64,10 +64,20 @@ func (s *AuthService) Register(ctx context.Context, in appdto.RegisterInput) (*A
 		return nil, fmt.Errorf("create user: %w", err)
 	}
 
-	return s.buildAuthResult(user)
+	token, expiresIn, err := appjwt.SignAccessToken(s.cfg, user.ID, user.Email)
+	if err != nil {
+		return nil, err
+	}
+
+	return &AuthResult{
+		AccessToken: token,
+		TokenType:   "Bearer",
+		ExpiresIn:   expiresIn,
+		User:        user.ToProfile(),
+	}, nil
 }
 
-func (s *AuthService) Login(ctx context.Context, in appdto.LoginInput) (*AuthResult, error) {
+func (s *AuthService) HandleLogin(ctx context.Context, in appdto.LoginInput) (*AuthResult, error) {
 	email := strings.TrimSpace(strings.ToLower(in.Body.Email))
 
 	user, err := s.userRepo.FindByEmail(ctx, email)
@@ -92,30 +102,7 @@ func (s *AuthService) Login(ctx context.Context, in appdto.LoginInput) (*AuthRes
 	}
 	user.LastLoginAt = &now
 
-	return s.buildAuthResult(user)
-}
-
-func (s *AuthService) GenerateToken(userID, email string) (string, int64, error) {
-	expiresAt := time.Now().UTC().Add(s.cfg.Expiry)
-	claims := jwt.MapClaims{
-		"sub":   userID,
-		"email": email,
-		"iss":   s.cfg.Issuer,
-		"exp":   expiresAt.Unix(),
-		"iat":   time.Now().UTC().Unix(),
-	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	signed, err := token.SignedString([]byte(s.cfg.SecretKey))
-	if err != nil {
-		return "", 0, fmt.Errorf("sign token: %w", err)
-	}
-
-	return signed, int64(s.cfg.Expiry.Seconds()), nil
-}
-
-func (s *AuthService) buildAuthResult(user *entities.User) (*AuthResult, error) {
-	token, expiresIn, err := s.GenerateToken(user.ID, user.Email)
+	token, expiresIn, err := appjwt.SignAccessToken(s.cfg, user.ID, user.Email)
 	if err != nil {
 		return nil, err
 	}

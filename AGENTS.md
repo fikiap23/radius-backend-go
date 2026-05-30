@@ -28,6 +28,8 @@ domain ← application ← infrastructure ← interface
 | Manual DI in `module.go` + `bootstrap/` | wire/fx without approval |
 | Service method + entity as default | Premature command/query/mapper layers |
 | Repository fields named `{model}Repo` (e.g. `userRepo`) | Ambiguous names like `users` for a repository |
+| Service methods `Handle{Action}` only (one per HTTP use case) | Public helpers on services (`GenerateToken`, `MapError`, etc.) |
+| API paths without version prefix (`/auth/...`, `/users/...`) | `/v1/...` unless versioning is explicitly decided |
 
 ### Stack
 
@@ -75,4 +77,4 @@ Auth header: `Authorization: Bearer <token>`
 
 Prefer `make up`, `make migrate`, `make run` over ad-hoc docker commands.
 
-New HTTP operations: register with `huma.Register` in `interface/api/rest`. Request/response types live in `application/dto` (shared by Huma handlers and services; include `json` / constraint tags for OpenAPI). Map to domain types only when shapes differ (e.g. `UpdateMeInput.ToDomain()`). Reuse `internal/shared/humaapi` for envelope responses.
+New HTTP operations: register with `huma.Register` in `interface/api/rest`; delegate to `service.Handle{Action}`. Request/response types live in `application/dto` (shared by Huma and services). Cross-cutting utils (JWT sign, etc.) go in `internal/shared/`, not on services. Reuse `internal/shared/humaapi` for envelope responses.

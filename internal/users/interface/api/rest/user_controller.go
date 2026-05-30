@@ -23,7 +23,7 @@ func RegisterUsers(api huma.API, service *services.UserService, auth *appmiddlew
 	huma.Register(api, huma.Operation{
 		OperationID: "users-get-me",
 		Method:      http.MethodGet,
-		Path:        "/v1/users/me",
+		Path:        "/users/me",
 		Summary:     "Get current user profile",
 		Tags:        []string{"users"},
 		Security:    humaapi.BearerSecurity(),
@@ -34,7 +34,7 @@ func RegisterUsers(api huma.API, service *services.UserService, auth *appmiddlew
 			return nil, err
 		}
 
-		profile, err := service.GetMe(ctx, userID)
+		profile, err := service.HandleGetMe(ctx, userID)
 		if err != nil {
 			return nil, humaapi.MapError(err, userErrors, logger)
 		}
@@ -44,7 +44,7 @@ func RegisterUsers(api huma.API, service *services.UserService, auth *appmiddlew
 	huma.Register(api, huma.Operation{
 		OperationID: "users-update-me",
 		Method:      http.MethodPatch,
-		Path:        "/v1/users/me",
+		Path:        "/users/me",
 		Summary:     "Update current user profile",
 		Tags:        []string{"users"},
 		Security:    humaapi.BearerSecurity(),
@@ -55,7 +55,7 @@ func RegisterUsers(api huma.API, service *services.UserService, auth *appmiddlew
 			return nil, err
 		}
 
-		profile, err := service.UpdateMe(ctx, userID, in.ToDomain())
+		profile, err := service.HandleUpdateMe(ctx, userID, in.ToDomain())
 		if err != nil {
 			return nil, humaapi.MapError(err, userErrors, logger)
 		}
