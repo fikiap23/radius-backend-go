@@ -92,15 +92,17 @@ migrate-hash:
 	$(COMPOSE) run --rm --no-deps migrate migrate hash --dir file:///app/migrations
 
 # Generate Atlas SQL from ent/schema. Starts Postgres, ensures radius_dev, runs diff in app container.
-migrate-diff: ent-generate migrate-hash
+migrate-diff: ent-generate
 	@if [ -z "$(NAME)" ]; then echo "usage: make migrate-diff NAME=<migration_name>"; exit 1; fi
 	$(COMPOSE) up -d postgres --wait
 	@$(COMPOSE) exec -T postgres psql -U postgres -d postgres -tc \
 		"SELECT 1 FROM pg_database WHERE datname='$(DEV_DB)'" | grep -q 1 || \
 		$(COMPOSE) exec -T postgres psql -U postgres -d postgres -c "CREATE DATABASE $(DEV_DB);"
+	@$(COMPOSE) exec -T postgres psql -U postgres -d $(DEV_DB) -c "CREATE EXTENSION IF NOT EXISTS citext;"
 	$(COMPOSE) run --rm --no-deps app sh -c '\
 		export ATLAS_DEV_URL="postgres://$${DB_USER:-postgres}:$${DB_PASSWORD:-postgres}@postgres:5432/$(DEV_DB)?sslmode=disable" && \
 		go run -mod=mod ent/migrate/diff/main.go "$(NAME)"'
+	$(MAKE) migrate-hash
 	@echo "Migration written to migrations/. Review the SQL, then: make migrate"
 
 clean:
