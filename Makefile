@@ -1,4 +1,4 @@
-.PHONY: help build run test tidy fmt up down restart logs exec migrate migrate-diff ent-generate clean
+.PHONY: help build run test tidy fmt up down restart logs exec migrate migrate-hash migrate-diff ent-generate clean
 
 DEV_DB := radius_dev
 
@@ -26,6 +26,7 @@ help:
 	@echo "  make logs           - Follow app container logs"
 	@echo "  make exec           - Shell into app container"
 	@echo "  make migrate        - Run atlas migrate apply"
+	@echo "  make migrate-hash   - Recompute migrations/atlas.sum (fix checksum mismatch)"
 	@echo "  make migrate-diff   - Generate SQL migration from Ent schema (NAME=... required, Docker)"
 	@echo "  make ent-generate   - Regenerate Ent client (Docker)"
 	@echo ""
@@ -71,8 +72,11 @@ ent-generate:
 migrate:
 	$(COMPOSE) run --rm migrate
 
+migrate-hash:
+	$(COMPOSE) run --rm --no-deps migrate migrate hash --dir file:///app/migrations
+
 # Generate Atlas SQL from ent/schema. Starts Postgres, ensures radius_dev, runs diff in app container.
-migrate-diff: ent-generate
+migrate-diff: ent-generate migrate-hash
 	@if [ -z "$(NAME)" ]; then echo "usage: make migrate-diff NAME=<migration_name>"; exit 1; fi
 	$(COMPOSE) up -d postgres --wait
 	@$(COMPOSE) exec -T postgres psql -U postgres -d postgres -tc \
