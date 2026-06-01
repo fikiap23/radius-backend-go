@@ -30,6 +30,7 @@ help:
 	@echo "  make migrate-diff   - Generate SQL migration from Ent schema (NAME=... required, Docker)"
 	@echo "  make ent-generate   - Regenerate Ent client (Docker)"
 	@echo "  make ent-clean      - Remove generated Ent client + SQL migrations (keeps schema)"
+	@echo "  (Ent guide: docs/ENT.md)"
 	@echo ""
 	@echo "  make clean          - Remove build artifacts"
 

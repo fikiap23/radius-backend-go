@@ -46,14 +46,29 @@ func main() {
 		schema.WithMigrationMode(schema.ModeReplay),
 		schema.WithDialect(dialect.Postgres),
 		schema.WithFormatter(atlas.DefaultFormatter),
+		migrate.WithDropColumn(true),
+		migrate.WithDropIndex(true),
 	}
 
 	if len(os.Args) != 2 {
 		log.Fatalln("migration name is required. Use: 'go run -mod=mod ent/migrate/diff/main.go <name>'")
 	}
 
+	before, err := migrationSQLFiles(migrationsDir)
+	if err != nil {
+		log.Fatalf("failed listing migrations: %v", err)
+	}
+
 	if err := migrate.NamedDiff(ctx, devURL, os.Args[1], opts...); err != nil {
 		log.Fatalf("failed generating migration file: %v", err)
+	}
+
+	after, err := migrationSQLFiles(migrationsDir)
+	if err != nil {
+		log.Fatalf("failed listing migrations: %v", err)
+	}
+	if len(after) == len(before) {
+		log.Println("warning: no new migration file — Ent schema matches replayed migrations (no diff)")
 	}
 
 	if err := prependCitextToLatestMigration(migrationsDir); err != nil {
@@ -100,6 +115,24 @@ func prependCitextToLatestMigration(dir string) error {
 	if strings.Contains(string(content), citextExtensionSQL) {
 		return nil
 	}
+	// Only the initial migration creates tables; later diffs must not get CREATE EXTENSION.
+	if !strings.Contains(string(content), `CREATE TABLE "users"`) {
+		return nil
+	}
 
 	return os.WriteFile(path, append([]byte(citextPreamble), content...), 0o644)
+}
+
+func migrationSQLFiles(dir string) ([]string, error) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil, err
+	}
+	var files []string
+	for _, e := range entries {
+		if !e.IsDir() && strings.HasSuffix(e.Name(), ".sql") {
+			files = append(files, e.Name())
+		}
+	}
+	return files, nil
 }

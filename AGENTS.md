@@ -152,6 +152,8 @@ make ent-generate   # go generate ./ent
 
 ## 5. Migrations (Atlas)
 
+Ent workflow (schema, `ent-clean`, troubleshooting): [`docs/ENT.md`](docs/ENT.md).
+
 | Artifact | Location |
 |----------|----------|
 | SQL migrations | `migrations/*.sql` + `migrations/atlas.sum` |
