@@ -233,7 +233,7 @@ field.String("email").
 Extension Postgres `**citext**` harus ada di database:
 
 - Saat `**migrate-diff**`: Makefile + script diff menjalankan `CREATE EXTENSION IF NOT EXISTS citext` di `radius_dev`.
-- Saat **migrasi awal**: script diff menambahkan `CREATE EXTENSION` di file SQL yang berisi `CREATE TABLE "users"` (migrasi incremental tidak mendapat baris ini).
+- Saat **migrasi SQL**: script diff menambahkan `CREATE EXTENSION` sekali di file migrasi **paling awal** yang memakai tipe kolom `citext` (bukan terikat tabel `users`).
 
 Ent **tidak** menghasilkan `CREATE EXTENSION` sendiri.
 
@@ -442,7 +442,7 @@ Atau hapus file bermasalah dan generate ulang diff.
 
 ### `CREATE EXTENSION` muncul di migrasi ALTER
 
-Bug lama: preamble `citext` disisipkan ke migrasi terbaru. Hanya migrasi **awal** (`CREATE TABLE "users"`) yang perlu extension. Hapus baris `CREATE EXTENSION` dari file incremental (mis. hanya sisakan `ALTER TABLE … DROP COLUMN`).
+Jika `CREATE EXTENSION` muncul di migrasi yang tidak memakai tipe `citext`, hapus manual — extension hanya perlu sekali di DB dan seharusnya ada di migrasi pertama yang memperkenalkan kolom `citext`.
 
 ### Schema vs migrasi tidak selaras
 

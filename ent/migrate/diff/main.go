@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	atlas "ariga.io/atlas/sql/migrate"
@@ -21,7 +22,7 @@ import (
 const (
 	migrationsDir      = "migrations"
 	citextExtensionSQL = "CREATE EXTENSION IF NOT EXISTS citext"
-	citextPreamble     = "-- Enable citext for case-insensitive email.\n" + citextExtensionSQL + ";\n\n"
+	citextPreamble     = "-- Enable citext (required by citext columns in this migration).\n" + citextExtensionSQL + ";\n\n"
 )
 
 func main() {
@@ -71,7 +72,7 @@ func main() {
 		log.Println("warning: no new migration file — Ent schema matches replayed migrations (no diff)")
 	}
 
-	if err := prependCitextToLatestMigration(migrationsDir); err != nil {
+	if err := ensureCitextExtensionInMigrations(migrationsDir); err != nil {
 		log.Fatalf("failed patching migration for citext: %v", err)
 	}
 }
@@ -87,40 +88,46 @@ func ensurePostgresExtensions(ctx context.Context, devURL string) error {
 	return err
 }
 
-// Ent does not emit CREATE EXTENSION; prepend it to the newest migration when missing.
-func prependCitextToLatestMigration(dir string) error {
-	entries, err := os.ReadDir(dir)
+// Ent does not emit CREATE EXTENSION. If any migration uses the citext type and no file
+// declares the extension yet, prepend it to the earliest such migration (once per project).
+func ensureCitextExtensionInMigrations(dir string) error {
+	files, err := migrationSQLFiles(dir)
 	if err != nil {
 		return err
 	}
+	if len(files) == 0 {
+		return nil
+	}
+	sort.Strings(files)
 
-	var latest string
-	for _, e := range entries {
-		if e.IsDir() || !strings.HasSuffix(e.Name(), ".sql") {
+	for _, name := range files {
+		content, err := os.ReadFile(filepath.Join(dir, name))
+		if err != nil {
+			return err
+		}
+		if strings.Contains(string(content), citextExtensionSQL) {
+			return nil
+		}
+	}
+
+	for _, name := range files {
+		path := filepath.Join(dir, name)
+		content, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		if !sqlUsesCitextType(string(content)) {
 			continue
 		}
-		if latest == "" || e.Name() > latest {
-			latest = e.Name()
-		}
-	}
-	if latest == "" {
-		return nil
+		return os.WriteFile(path, append([]byte(citextPreamble), content...), 0o644)
 	}
 
-	path := filepath.Join(dir, latest)
-	content, err := os.ReadFile(path)
-	if err != nil {
-		return err
-	}
-	if strings.Contains(string(content), citextExtensionSQL) {
-		return nil
-	}
-	// Only the initial migration creates tables; later diffs must not get CREATE EXTENSION.
-	if !strings.Contains(string(content), `CREATE TABLE "users"`) {
-		return nil
-	}
+	return nil
+}
 
-	return os.WriteFile(path, append([]byte(citextPreamble), content...), 0o644)
+// sqlUsesCitextType reports Postgres citext column usage in migration SQL (any table).
+func sqlUsesCitextType(sql string) bool {
+	return strings.Contains(sql, " citext") || strings.Contains(sql, "\tcitext")
 }
 
 func migrationSQLFiles(dir string) ([]string, error) {
