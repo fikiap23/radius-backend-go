@@ -1,4 +1,4 @@
--- Enable citext for case-insensitive email.
+-- Enable citext (required by citext columns in this migration).
 CREATE EXTENSION IF NOT EXISTS citext;
 
 -- Create "users" table
