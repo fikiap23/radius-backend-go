@@ -1,5 +1,7 @@
 .PHONY: help build run test tidy fmt up down restart logs exec migrate migrate-diff ent-generate clean
 
+DEV_DB := radius_dev
+
 MAIN          := ./cmd/api
 BINARY        := bin/radius-backend
 BUILD_DIR     := build
@@ -24,8 +26,8 @@ help:
 	@echo "  make logs           - Follow app container logs"
 	@echo "  make exec           - Shell into app container"
 	@echo "  make migrate        - Run atlas migrate apply"
-	@echo "  make migrate-diff   - Generate migration diff (NAME=... required)"
-	@echo "  make ent-generate   - Run Ent code generation"
+	@echo "  make migrate-diff   - Generate SQL migration from Ent schema (NAME=... required, Docker)"
+	@echo "  make ent-generate   - Regenerate Ent client (Docker)"
 	@echo ""
 	@echo "  make clean          - Remove build artifacts"
 
@@ -64,15 +66,22 @@ exec:
 	$(COMPOSE) exec app sh
 
 ent-generate:
-	go generate ./ent
+	$(COMPOSE) run --rm --no-deps app go generate ./ent
 
 migrate:
 	$(COMPOSE) run --rm migrate
 
-migrate-diff:
+# Generate Atlas SQL from ent/schema. Starts Postgres, ensures radius_dev, runs diff in app container.
+migrate-diff: ent-generate
 	@if [ -z "$(NAME)" ]; then echo "usage: make migrate-diff NAME=<migration_name>"; exit 1; fi
-	@if [ -z "$(ATLAS_DEV_URL)" ]; then echo "ATLAS_DEV_URL is required (e.g. postgres://user:pass@localhost:5432/dev?sslmode=disable)"; exit 1; fi
-	go run -mod=mod ent/migrate/diff/main.go $(NAME)
+	$(COMPOSE) up -d postgres --wait
+	@$(COMPOSE) exec -T postgres psql -U postgres -d postgres -tc \
+		"SELECT 1 FROM pg_database WHERE datname='$(DEV_DB)'" | grep -q 1 || \
+		$(COMPOSE) exec -T postgres psql -U postgres -d postgres -c "CREATE DATABASE $(DEV_DB);"
+	$(COMPOSE) run --rm --no-deps app sh -c '\
+		export ATLAS_DEV_URL="postgres://$${DB_USER:-postgres}:$${DB_PASSWORD:-postgres}@postgres:5432/$(DEV_DB)?sslmode=disable" && \
+		go run -mod=mod ent/migrate/diff/main.go "$(NAME)"'
+	@echo "Migration written to migrations/. Review the SQL, then: make migrate"
 
 clean:
 	rm -rf bin tmp

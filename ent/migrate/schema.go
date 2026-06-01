@@ -20,6 +20,7 @@ var (
 		{Name: "last_login_at", Type: field.TypeTime, Nullable: true},
 		{Name: "timezone", Type: field.TypeString, Nullable: true, SchemaType: map[string]string{"postgres": "varchar(64)"}},
 		{Name: "locale", Type: field.TypeString, Default: "en", SchemaType: map[string]string{"postgres": "varchar(10)"}},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"active", "inactive"}, Default: "active"},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
 		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
@@ -33,7 +34,7 @@ var (
 			{
 				Name:    "user_deleted_at",
 				Unique:  false,
-				Columns: []*schema.Column{UsersColumns[11]},
+				Columns: []*schema.Column{UsersColumns[12]},
 			},
 		},
 	}
