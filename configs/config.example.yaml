@@ -24,3 +24,15 @@ jwt:
   secretkey: change-me-to-a-strong-secret
   issuer: radius-backend
   expiry: 24h
+
+oauth:
+  stateexpiry: 10m
+  allowedredirecturis:
+    - http://localhost:3000/auth/callback/google
+    - http://localhost:3000/auth/callback/github
+  google:
+    clientid: ""
+    clientsecret: ""
+  github:
+    clientid: ""
+    clientsecret: ""

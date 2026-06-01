@@ -14,6 +14,7 @@ type Config struct {
 	HTTP     HTTPConfig
 	Database DatabaseConfig
 	JWT      JWTConfig
+	OAuth    OAuthConfig
 }
 
 type AppConfig struct {
@@ -52,6 +53,18 @@ type JWTConfig struct {
 	SecretKey string
 	Issuer    string
 	Expiry    time.Duration
+}
+
+type OAuthConfig struct {
+	StateExpiry         time.Duration
+	AllowedRedirectURIs []string
+	Google              OAuthProviderConfig
+	GitHub              OAuthProviderConfig
+}
+
+type OAuthProviderConfig struct {
+	ClientID     string
+	ClientSecret string
 }
 
 func Load() (*Config, error) {
@@ -93,6 +106,13 @@ func Load() (*Config, error) {
 	}
 	cfg.JWT.Expiry = expiry
 
+	oauthStateExpiry, err := parseFlexibleDuration(v.GetString("oauth.stateexpiry"))
+	if err != nil {
+		return nil, fmt.Errorf("oauth.stateexpiry: %w", err)
+	}
+	cfg.OAuth.StateExpiry = oauthStateExpiry
+	normalizeAllowedRedirectURIs(v, &cfg.OAuth)
+
 	if err := cfg.validate(); err != nil {
 		return nil, fmt.Errorf("config validation failed: %w", err)
 	}
@@ -123,6 +143,13 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("jwt.secretkey", "")
 	v.SetDefault("jwt.expiry", "24h")
 	v.SetDefault("jwt.issuer", "radius-backend")
+
+	v.SetDefault("oauth.stateexpiry", "10m")
+	v.SetDefault("oauth.allowedredirecturis", []string{})
+	v.SetDefault("oauth.google.clientid", "")
+	v.SetDefault("oauth.google.clientsecret", "")
+	v.SetDefault("oauth.github.clientid", "")
+	v.SetDefault("oauth.github.clientsecret", "")
 }
 
 func (c *Config) validate() error {
@@ -176,4 +203,23 @@ func parseFlexibleDuration(raw string) (time.Duration, error) {
 		return 0, fmt.Errorf("invalid duration %q: %w", raw, err)
 	}
 	return d, nil
+}
+
+func normalizeAllowedRedirectURIs(v *viper.Viper, oauth *OAuthConfig) {
+	raw := strings.TrimSpace(v.GetString("oauth.allowedredirecturis"))
+	if raw == "" && len(oauth.AllowedRedirectURIs) == 1 && strings.Contains(oauth.AllowedRedirectURIs[0], ",") {
+		raw = oauth.AllowedRedirectURIs[0]
+	}
+	if raw == "" {
+		return
+	}
+
+	parts := strings.Split(raw, ",")
+	uris := make([]string, 0, len(parts))
+	for _, part := range parts {
+		if trimmed := strings.TrimSpace(part); trimmed != "" {
+			uris = append(uris, trimmed)
+		}
+	}
+	oauth.AllowedRedirectURIs = uris
 }

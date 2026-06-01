@@ -24,3 +24,16 @@ type userModel struct {
 func (userModel) TableName() string {
 	return "users"
 }
+
+type oauthAccountModel struct {
+	ID             string    `gorm:"column:id;primaryKey"`
+	UserID         string    `gorm:"column:user_id;not null;index"`
+	Provider       string    `gorm:"column:provider;not null"`
+	ProviderUserID string    `gorm:"column:provider_user_id;not null"`
+	CreatedAt      time.Time `gorm:"column:created_at;not null;autoCreateTime"`
+	UpdatedAt      time.Time `gorm:"column:updated_at;not null;autoUpdateTime"`
+}
+
+func (oauthAccountModel) TableName() string {
+	return "user_oauth_accounts"
+}

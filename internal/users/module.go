@@ -12,6 +12,7 @@ import (
 	appmiddleware "github.com/radius/radius-backend/internal/shared/middleware"
 	"github.com/radius/radius-backend/internal/users/application/services"
 	"github.com/radius/radius-backend/internal/users/infrastructure/db/postgres"
+	infraoauth "github.com/radius/radius-backend/internal/users/infrastructure/oauth"
 	"github.com/radius/radius-backend/internal/users/interface/api/rest"
 )
 
@@ -34,7 +35,16 @@ func (m *Module) wire(deps module.Dependencies) {
 	}
 
 	userRepo := postgres.NewGormUserRepository(deps.DB, deps.Logger)
-	m.authSvc = services.NewAuthService(userRepo, deps.Config.JWT, deps.Logger)
+	oauthAccountRepo := postgres.NewGormOAuthAccountRepository(deps.DB, deps.Logger)
+	oauthProviders := infraoauth.NewRegistry(deps.Config.OAuth)
+	m.authSvc = services.NewAuthService(
+		userRepo,
+		oauthAccountRepo,
+		oauthProviders,
+		deps.Config.OAuth,
+		deps.Config.JWT,
+		deps.Logger,
+	)
 	m.userSvc = services.NewUserService(userRepo, deps.Logger)
 }
 
