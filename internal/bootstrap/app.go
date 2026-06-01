@@ -10,9 +10,11 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
+	echomw "github.com/labstack/echo/v4/middleware"
 	"github.com/radius/radius-backend/internal/module"
 	"github.com/radius/radius-backend/internal/shared/config"
 	"github.com/radius/radius-backend/internal/shared/database"
+	"github.com/radius/radius-backend/internal/shared/httplog"
 	"github.com/radius/radius-backend/internal/shared/middleware"
 	"github.com/radius/radius-backend/internal/users"
 	"go.uber.org/zap"
@@ -51,7 +53,12 @@ func Run() error {
 	e := echo.New()
 	e.HideBanner = true
 	e.HidePort = true
-	e.Use(middleware.CORS(cfg.HTTP.CORS))
+	e.Use(
+		httplog.RequestLogger(logger),
+		echomw.Recover(),
+		echomw.RequestID(),
+		middleware.CORS(cfg.HTTP.CORS),
+	)
 
 	contexts := []module.BoundedContext{
 		users.NewModule(),

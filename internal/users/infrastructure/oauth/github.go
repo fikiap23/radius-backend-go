@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/radius/radius-backend/internal/shared/config"
-	"github.com/radius/radius-backend/internal/users/domain/entities"
+	"github.com/radius/radius-backend/internal/users/domain"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/github"
 )
@@ -32,8 +32,8 @@ func NewGitHubProvider(cfg config.OAuthProviderConfig) Provider {
 	}
 }
 
-func (p *githubProvider) Name() entities.OAuthProvider {
-	return entities.OAuthProviderGitHub
+func (p *githubProvider) Name() domain.OAuthProvider {
+	return domain.OAuthProviderGitHub
 }
 
 func (p *githubProvider) Enabled() bool {

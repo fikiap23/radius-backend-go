@@ -2,28 +2,25 @@ package postgres
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/radius/radius-backend/internal/users/domain"
-	"github.com/radius/radius-backend/internal/users/domain/entities"
-	"github.com/radius/radius-backend/internal/users/domain/repositories"
-	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
 type GormUserRepository struct {
-	db     *gorm.DB
-	logger *zap.Logger
+	db *gorm.DB
 }
 
-func NewGormUserRepository(db *gorm.DB, logger *zap.Logger) *GormUserRepository {
-	return &GormUserRepository{db: db, logger: logger}
+func NewGormUserRepository(db *gorm.DB) *GormUserRepository {
+	return &GormUserRepository{db: db}
 }
 
-var _ repositories.UserRepository = (*GormUserRepository)(nil)
+var _ domain.UserRepository = (*GormUserRepository)(nil)
 
-func (r *GormUserRepository) Create(ctx context.Context, user *entities.User) error {
+func (r *GormUserRepository) Create(ctx context.Context, user *domain.User) error {
 	model := toModel(user)
 	if err := r.db.WithContext(ctx).Create(&model).Error; err != nil {
 		return fmt.Errorf("create user: %w", err)
@@ -34,24 +31,24 @@ func (r *GormUserRepository) Create(ctx context.Context, user *entities.User) er
 	return nil
 }
 
-func (r *GormUserRepository) FindByID(ctx context.Context, id string, fields ...repositories.UserFields) (*entities.User, error) {
-	f := repositories.SelectAll
+func (r *GormUserRepository) FindByID(ctx context.Context, id string, fields ...domain.Fields) (*domain.User, error) {
+	f := domain.FieldsAll
 	if len(fields) > 0 {
 		f = fields[0]
 	}
-	return r.FindOne(ctx, repositories.Query{
+	return r.FindOne(ctx, domain.Query{
 		Select: f,
-		Where:  repositories.Where{ID: &id},
+		Filter: domain.Filter{ID: &id},
 	})
 }
 
-func (r *GormUserRepository) FindOne(ctx context.Context, q repositories.Query) (*entities.User, error) {
+func (r *GormUserRepository) FindOne(ctx context.Context, q domain.Query) (*domain.User, error) {
 	var model userModel
-	db := applyWhere(r.db.WithContext(ctx), q.Where)
-	db = applySelect(db, q.Fields())
+	db := applyFilter(r.db.WithContext(ctx), q.Filter)
+	db = applySelect(db, q.Select)
 
 	if err := db.First(&model).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, domain.ErrUserNotFound
 		}
 		return nil, fmt.Errorf("find user: %w", err)
@@ -59,9 +56,9 @@ func (r *GormUserRepository) FindOne(ctx context.Context, q repositories.Query) 
 	return toEntity(&model), nil
 }
 
-func (r *GormUserRepository) FindMany(ctx context.Context, q repositories.Query) ([]*entities.User, error) {
-	db := applyWhere(r.db.WithContext(ctx), q.Where)
-	db = applySelect(db, q.Fields())
+func (r *GormUserRepository) FindMany(ctx context.Context, q domain.Query) ([]*domain.User, error) {
+	db := applyFilter(r.db.WithContext(ctx), q.Filter)
+	db = applySelect(db, q.Select)
 
 	var models []userModel
 	if err := db.Order("created_at DESC").Find(&models).Error; err != nil {
@@ -70,8 +67,8 @@ func (r *GormUserRepository) FindMany(ctx context.Context, q repositories.Query)
 	return toEntities(models), nil
 }
 
-func (r *GormUserRepository) FindManyPaginate(ctx context.Context, q repositories.Query, page repositories.Page) (*repositories.PageResult, error) {
-	base := applyWhere(r.db.WithContext(ctx).Model(&userModel{}), q.Where)
+func (r *GormUserRepository) FindManyPaginate(ctx context.Context, q domain.Query, page domain.Page) (*domain.PageResult, error) {
+	base := applyFilter(r.db.WithContext(ctx).Model(&userModel{}), q.Filter)
 
 	var total int64
 	if err := base.Count(&total).Error; err != nil {
@@ -79,20 +76,20 @@ func (r *GormUserRepository) FindManyPaginate(ctx context.Context, q repositorie
 	}
 
 	limit, offset := normalizePage(page)
-	db := applySelect(base, q.Fields())
+	db := applySelect(base, q.Select)
 
 	var models []userModel
 	if err := db.Order("created_at DESC").Limit(limit).Offset(offset).Find(&models).Error; err != nil {
 		return nil, fmt.Errorf("find users: %w", err)
 	}
 
-	return &repositories.PageResult{
+	return &domain.PageResult{
 		Items: toEntities(models),
 		Total: total,
 	}, nil
 }
 
-func (r *GormUserRepository) UpdateByID(ctx context.Context, id string, data repositories.Update) error {
+func (r *GormUserRepository) UpdateByID(ctx context.Context, id string, data domain.Update) error {
 	values := updateToMap(data)
 	if len(values) == 0 {
 		return nil
@@ -126,9 +123,7 @@ func (r *GormUserRepository) DeleteByID(ctx context.Context, id string) error {
 	return nil
 }
 
-// --- helpers ---
-
-func normalizePage(page repositories.Page) (int, int) {
+func normalizePage(page domain.Page) (int, int) {
 	limit := page.Limit
 	if limit <= 0 {
 		limit = 20
@@ -140,15 +135,15 @@ func normalizePage(page repositories.Page) (int, int) {
 	return limit, offset
 }
 
-func toEntities(models []userModel) []*entities.User {
-	out := make([]*entities.User, len(models))
+func toEntities(models []userModel) []*domain.User {
+	out := make([]*domain.User, len(models))
 	for i := range models {
 		out[i] = toEntity(&models[i])
 	}
 	return out
 }
 
-func toModel(user *entities.User) userModel {
+func toModel(user *domain.User) userModel {
 	return userModel{
 		ID:              user.ID,
 		Name:            user.Name,
@@ -164,8 +159,8 @@ func toModel(user *entities.User) userModel {
 	}
 }
 
-func toEntity(model *userModel) *entities.User {
-	return &entities.User{
+func toEntity(model *userModel) *domain.User {
+	return &domain.User{
 		ID:              model.ID,
 		Name:            model.Name,
 		Email:           model.Email,

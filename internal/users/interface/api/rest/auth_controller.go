@@ -22,7 +22,7 @@ var authErrors = []humaapi.ErrorMapping{
 	{Err: domain.ErrSSOGitHubEmailPermission, Status: http.StatusForbidden, Code: "sso_github_email_permission", Message: "GitHub did not grant access to your email address."},
 }
 
-func RegisterAuth(api huma.API, service *services.AuthService, logger *zap.Logger) {
+func RegisterAuth(api huma.API, svc *services.AuthService, logger *zap.Logger) {
 	huma.Register(api, huma.Operation{
 		OperationID:   "auth-register",
 		Method:        http.MethodPost,
@@ -31,7 +31,7 @@ func RegisterAuth(api huma.API, service *services.AuthService, logger *zap.Logge
 		Tags:          []string{"auth"},
 		DefaultStatus: http.StatusCreated,
 	}, func(ctx context.Context, in *dto.RegisterInput) (*humaapi.CreatedOutput, error) {
-		result, err := service.HandleRegister(ctx, *in)
+		result, err := svc.HandleRegister(ctx, *in)
 		if err != nil {
 			return nil, humaapi.MapError(err, authErrors, logger)
 		}
@@ -45,7 +45,7 @@ func RegisterAuth(api huma.API, service *services.AuthService, logger *zap.Logge
 		Summary:     "Login",
 		Tags:        []string{"auth"},
 	}, func(ctx context.Context, in *dto.LoginInput) (*humaapi.OKOutput, error) {
-		result, err := service.HandleLogin(ctx, *in)
+		result, err := svc.HandleLogin(ctx, *in)
 		if err != nil {
 			return nil, humaapi.MapError(err, authErrors, logger)
 		}
@@ -59,7 +59,7 @@ func RegisterAuth(api huma.API, service *services.AuthService, logger *zap.Logge
 		Summary:     "Get Google SSO authorization URL",
 		Tags:        []string{"auth"},
 	}, func(ctx context.Context, in *dto.GoogleSSOAuthURLInput) (*humaapi.OKOutput, error) {
-		result, err := service.HandleGoogleSSOAuthURL(ctx, *in)
+		result, err := svc.HandleGoogleSSOAuthURL(ctx, *in)
 		if err != nil {
 			return nil, humaapi.MapError(err, authErrors, logger)
 		}
@@ -73,7 +73,7 @@ func RegisterAuth(api huma.API, service *services.AuthService, logger *zap.Logge
 		Summary:     "Complete Google SSO login",
 		Tags:        []string{"auth"},
 	}, func(ctx context.Context, in *dto.GoogleSSOCallbackInput) (*humaapi.OKOutput, error) {
-		result, err := service.HandleGoogleSSOCallback(ctx, *in)
+		result, err := svc.HandleGoogleSSOCallback(ctx, *in)
 		if err != nil {
 			return nil, humaapi.MapError(err, authErrors, logger)
 		}
@@ -87,7 +87,7 @@ func RegisterAuth(api huma.API, service *services.AuthService, logger *zap.Logge
 		Summary:     "Get GitHub SSO authorization URL",
 		Tags:        []string{"auth"},
 	}, func(ctx context.Context, in *dto.GitHubSSOAuthURLInput) (*humaapi.OKOutput, error) {
-		result, err := service.HandleGitHubSSOAuthURL(ctx, *in)
+		result, err := svc.HandleGitHubSSOAuthURL(ctx, *in)
 		if err != nil {
 			return nil, humaapi.MapError(err, authErrors, logger)
 		}
@@ -101,7 +101,7 @@ func RegisterAuth(api huma.API, service *services.AuthService, logger *zap.Logge
 		Summary:     "Complete GitHub SSO login",
 		Tags:        []string{"auth"},
 	}, func(ctx context.Context, in *dto.GitHubSSOCallbackInput) (*humaapi.OKOutput, error) {
-		result, err := service.HandleGitHubSSOCallback(ctx, *in)
+		result, err := svc.HandleGitHubSSOCallback(ctx, *in)
 		if err != nil {
 			return nil, humaapi.MapError(err, authErrors, logger)
 		}

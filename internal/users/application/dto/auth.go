@@ -14,3 +14,10 @@ type LoginInput struct {
 		Password string `json:"password" doc:"Password" minLength:"8" maxLength:"72"`
 	}
 }
+
+type AuthResult struct {
+	AccessToken string      `json:"accessToken"`
+	TokenType   string      `json:"tokenType"`
+	ExpiresIn   int64       `json:"expiresIn"`
+	User        UserProfile `json:"user"`
+}

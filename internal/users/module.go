@@ -5,14 +5,12 @@ import (
 
 	"github.com/danielgtaylor/huma/v2/adapters/humaecho"
 	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
 	"github.com/radius/radius-backend/internal/module"
-	"github.com/radius/radius-backend/internal/shared/httplog"
 	"github.com/radius/radius-backend/internal/shared/humaapi"
-	appmiddleware "github.com/radius/radius-backend/internal/shared/middleware"
+	"github.com/radius/radius-backend/internal/shared/middleware"
 	"github.com/radius/radius-backend/internal/users/application/services"
 	"github.com/radius/radius-backend/internal/users/infrastructure/db/postgres"
-	infraoauth "github.com/radius/radius-backend/internal/users/infrastructure/oauth"
+	"github.com/radius/radius-backend/internal/users/infrastructure/oauth"
 	"github.com/radius/radius-backend/internal/users/interface/api/rest"
 )
 
@@ -34,12 +32,13 @@ func (m *Module) wire(deps module.Dependencies) {
 		return
 	}
 
-	userRepo := postgres.NewGormUserRepository(deps.DB, deps.Logger)
-	oauthAccountRepo := postgres.NewGormOAuthAccountRepository(deps.DB, deps.Logger)
-	oauthProviders := infraoauth.NewRegistry(deps.Config.OAuth)
+	userRepo := postgres.NewGormUserRepository(deps.DB)
+	oauthRepo := postgres.NewGormOAuthAccountRepository(deps.DB)
+	oauthProviders := oauth.NewRegistry(deps.Config.OAuth)
+
 	m.authSvc = services.NewAuthService(
 		userRepo,
-		oauthAccountRepo,
+		oauthRepo,
 		oauthProviders,
 		deps.Config.OAuth,
 		deps.Config.JWT,
@@ -48,14 +47,8 @@ func (m *Module) wire(deps module.Dependencies) {
 	m.userSvc = services.NewUserService(userRepo, deps.Logger)
 }
 
-func (m *Module) RegisterHTTP(e *echo.Echo, deps module.Dependencies, auth *appmiddleware.AuthMiddleware) {
+func (m *Module) RegisterHTTP(e *echo.Echo, deps module.Dependencies, auth *middleware.AuthMiddleware) {
 	m.wire(deps)
-
-	e.Use(
-		httplog.RequestLogger(deps.Logger),
-		middleware.Recover(),
-		middleware.RequestID(),
-	)
 
 	api := humaecho.New(e, humaapi.NewConfig(deps.Config))
 

@@ -24,12 +24,15 @@ domain ← application ← infrastructure ← interface
 | ALLOWED | FORBIDDEN |
 |---------|-----------|
 | `interface` → `application` → `domain` | `domain` importing infra frameworks |
-| GORM models in `infrastructure/db/postgres/models.go` only | GORM tags in `domain/entities` |
+| GORM models in `infrastructure/db/postgres/models.go` only | GORM tags in `domain/` |
 | Manual DI in `module.go` + `bootstrap/` | wire/fx without approval |
 | Service method + entity as default | Premature command/query/mapper layers |
 | Repository fields named `{model}Repo` (e.g. `userRepo`) | Ambiguous names like `users` for a repository |
 | Service methods `Handle{Action}` only (one per HTTP use case) | Public helpers on services (`GenerateToken`, `MapError`, etc.) |
 | API paths without version prefix (`/auth/...`, `/users/...`) | `/v1/...` unless versioning is explicitly decided |
+| JSON tags only in `application/dto` | JSON tags in `domain/` |
+| Domain types flat in `domain/` package | Sub-packages like `domain/entities`, `domain/repositories` |
+| Global middleware in `bootstrap/app.go` | Module registering global middleware |
 
 ### Stack
 

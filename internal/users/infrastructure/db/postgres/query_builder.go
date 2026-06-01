@@ -1,62 +1,43 @@
 package postgres
 
 import (
-	"github.com/radius/radius-backend/internal/users/domain/repositories"
+	"github.com/radius/radius-backend/internal/users/domain"
 	"gorm.io/gorm"
 )
 
-// --- Select ---
-
-var fieldColumnMap = []struct {
-	field  repositories.UserFields
-	column string
-}{
-	{repositories.FieldID, "id"},
-	{repositories.FieldName, "name"},
-	{repositories.FieldEmail, "email"},
-	{repositories.FieldPasswordHash, "password_hash"},
-	{repositories.FieldEmailVerifiedAt, "email_verified_at"},
-	{repositories.FieldAvatarURL, "avatar_url"},
-	{repositories.FieldLastLoginAt, "last_login_at"},
-	{repositories.FieldTimezone, "timezone"},
-	{repositories.FieldLocale, "locale"},
-	{repositories.FieldCreatedAt, "created_at"},
-	{repositories.FieldUpdatedAt, "updated_at"},
+var fieldColumns = map[domain.Fields][]string{
+	domain.FieldsProfile: {
+		"id", "name", "email", "email_verified_at", "avatar_url",
+		"last_login_at", "timezone", "locale", "created_at", "updated_at",
+	},
+	domain.FieldsLogin: {
+		"id", "name", "email", "password_hash", "email_verified_at", "avatar_url",
+		"last_login_at", "timezone", "locale", "created_at", "updated_at",
+	},
+	domain.FieldsExists: {"id"},
 }
 
-func applySelect(db *gorm.DB, fields repositories.UserFields) *gorm.DB {
-	if fields == repositories.SelectAll {
-		return db
-	}
-	cols := make([]string, 0, 11)
-	for _, m := range fieldColumnMap {
-		if fields&m.field != 0 {
-			cols = append(cols, m.column)
-		}
-	}
-	if len(cols) == 0 {
+func applySelect(db *gorm.DB, fields domain.Fields) *gorm.DB {
+	cols, ok := fieldColumns[fields]
+	if !ok || fields == domain.FieldsAll {
 		return db
 	}
 	return db.Select(cols)
 }
 
-// --- Where ---
-
-func applyWhere(db *gorm.DB, where repositories.Where) *gorm.DB {
+func applyFilter(db *gorm.DB, f domain.Filter) *gorm.DB {
 	db = db.Where("deleted_at IS NULL")
-	if where.ID != nil {
-		db = db.Where("id = ?", *where.ID)
+	if f.ID != nil {
+		db = db.Where("id = ?", *f.ID)
 	}
-	if where.Email != nil {
-		db = db.Where("email = ?", *where.Email)
+	if f.Email != nil {
+		db = db.Where("email = ?", *f.Email)
 	}
 	return db
 }
 
-// --- Update ---
-
-func updateToMap(data repositories.Update) map[string]interface{} {
-	m := make(map[string]interface{})
+func updateToMap(data domain.Update) map[string]any {
+	m := make(map[string]any)
 	if data.Name != nil {
 		m["name"] = *data.Name
 	}

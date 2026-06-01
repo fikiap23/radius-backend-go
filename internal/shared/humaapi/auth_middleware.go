@@ -6,7 +6,7 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humaecho"
-	appmiddleware "github.com/radius/radius-backend/internal/shared/middleware"
+	"github.com/radius/radius-backend/internal/shared/middleware"
 )
 
 type contextKey string
@@ -21,7 +21,7 @@ func UserIDFromContext(ctx context.Context) (string, error) {
 	return id, nil
 }
 
-func RequireAuth(auth *appmiddleware.AuthMiddleware, api huma.API) func(huma.Context, func(huma.Context)) {
+func RequireAuth(auth *middleware.AuthMiddleware, api huma.API) func(huma.Context, func(huma.Context)) {
 	return func(ctx huma.Context, next func(huma.Context)) {
 		ec := humaecho.Unwrap(ctx)
 
@@ -36,7 +36,7 @@ func RequireAuth(auth *appmiddleware.AuthMiddleware, api huma.API) func(huma.Con
 			return
 		}
 
-		userID, _ := appmiddleware.GetUserID(ec)
+		userID, _ := middleware.GetUserID(ec)
 		req := ec.Request().WithContext(context.WithValue(ec.Request().Context(), userIDContextKey, userID))
 		ec.SetRequest(req)
 

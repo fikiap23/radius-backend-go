@@ -6,24 +6,21 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
-	"github.com/radius/radius-backend/internal/users/domain/entities"
-	"github.com/radius/radius-backend/internal/users/domain/repositories"
-	"go.uber.org/zap"
+	"github.com/radius/radius-backend/internal/users/domain"
 	"gorm.io/gorm"
 )
 
 type GormOAuthAccountRepository struct {
-	db     *gorm.DB
-	logger *zap.Logger
+	db *gorm.DB
 }
 
-func NewGormOAuthAccountRepository(db *gorm.DB, logger *zap.Logger) *GormOAuthAccountRepository {
-	return &GormOAuthAccountRepository{db: db, logger: logger}
+func NewGormOAuthAccountRepository(db *gorm.DB) *GormOAuthAccountRepository {
+	return &GormOAuthAccountRepository{db: db}
 }
 
-var _ repositories.OAuthAccountRepository = (*GormOAuthAccountRepository)(nil)
+var _ domain.OAuthAccountRepository = (*GormOAuthAccountRepository)(nil)
 
-func (r *GormOAuthAccountRepository) Create(ctx context.Context, account *entities.OAuthAccount) error {
+func (r *GormOAuthAccountRepository) Create(ctx context.Context, account *domain.OAuthAccount) error {
 	if account.ID == "" {
 		account.ID = uuid.NewString()
 	}
@@ -46,9 +43,9 @@ func (r *GormOAuthAccountRepository) Create(ctx context.Context, account *entiti
 
 func (r *GormOAuthAccountRepository) FindByProviderAccount(
 	ctx context.Context,
-	provider entities.OAuthProvider,
+	provider domain.OAuthProvider,
 	providerUserID string,
-) (*entities.OAuthAccount, error) {
+) (*domain.OAuthAccount, error) {
 	var model oauthAccountModel
 	err := r.db.WithContext(ctx).
 		Where("provider = ? AND provider_user_id = ?", string(provider), providerUserID).
@@ -60,10 +57,10 @@ func (r *GormOAuthAccountRepository) FindByProviderAccount(
 		return nil, fmt.Errorf("find oauth account: %w", err)
 	}
 
-	return &entities.OAuthAccount{
+	return &domain.OAuthAccount{
 		ID:             model.ID,
 		UserID:         model.UserID,
-		Provider:       entities.OAuthProvider(model.Provider),
+		Provider:       domain.OAuthProvider(model.Provider),
 		ProviderUserID: model.ProviderUserID,
 		CreatedAt:      model.CreatedAt,
 		UpdatedAt:      model.UpdatedAt,
