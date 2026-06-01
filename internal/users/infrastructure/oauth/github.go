@@ -127,6 +127,9 @@ func (p *githubProvider) fetchPrimaryEmail(ctx context.Context, client *http.Cli
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode == http.StatusForbidden {
+		return "", false, fmt.Errorf("github emails forbidden: enable Email read permission on your GitHub App, or use a classic OAuth App with user:email scope")
+	}
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
 		return "", false, fmt.Errorf("github emails status %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))

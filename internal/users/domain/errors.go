@@ -12,4 +12,5 @@ var (
 	ErrSSOInvalidState         = errors.New("sso invalid state")
 	ErrSSOInvalidRedirectURI   = errors.New("sso invalid redirect uri")
 	ErrSSOAuthenticationFailed   = errors.New("sso authentication failed")
+	ErrSSOGitHubEmailPermission  = errors.New("sso github email permission required")
 )

@@ -176,6 +176,9 @@ func (s *AuthService) handleSSOCallback(ctx context.Context, provider entities.O
 	userInfo, err := p.Exchange(ctx, code, redirectURI)
 	if err != nil {
 		s.logger.Warn("oauth exchange failed", zap.String("provider", string(provider)), zap.Error(err))
+		if provider == entities.OAuthProviderGitHub && strings.Contains(err.Error(), "github emails forbidden") {
+			return nil, domain.ErrSSOGitHubEmailPermission
+		}
 		return nil, domain.ErrSSOAuthenticationFailed
 	}
 

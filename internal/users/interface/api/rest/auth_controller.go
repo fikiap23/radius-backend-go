@@ -19,6 +19,7 @@ var authErrors = []humaapi.ErrorMapping{
 	{Err: domain.ErrSSOInvalidState, Status: http.StatusBadRequest, Message: "SSO_INVALID_STATE"},
 	{Err: domain.ErrSSOInvalidRedirectURI, Status: http.StatusBadRequest, Message: "SSO_INVALID_REDIRECT_URI"},
 	{Err: domain.ErrSSOAuthenticationFailed, Status: http.StatusUnauthorized, Message: "SSO_AUTHENTICATION_FAILED"},
+	{Err: domain.ErrSSOGitHubEmailPermission, Status: http.StatusForbidden, Message: "SSO_GITHUB_EMAIL_PERMISSION"},
 }
 
 func RegisterAuth(api huma.API, service *services.AuthService, logger *zap.Logger) {
