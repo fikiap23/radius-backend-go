@@ -10,12 +10,12 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/radius/radius-backend/internal/shared/config"
-	appoauth "github.com/radius/radius-backend/internal/shared/oauth"
 	appjwt "github.com/radius/radius-backend/internal/shared/jwt"
+	appoauth "github.com/radius/radius-backend/internal/shared/oauth"
 	appdto "github.com/radius/radius-backend/internal/users/application/dto"
 	"github.com/radius/radius-backend/internal/users/domain"
 	"github.com/radius/radius-backend/internal/users/domain/entities"
-	"github.com/radius/radius-backend/internal/users/domain/repositories"
+	repo "github.com/radius/radius-backend/internal/users/domain/repositories"
 	infraoauth "github.com/radius/radius-backend/internal/users/infrastructure/oauth"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/bcrypt"
@@ -29,17 +29,17 @@ type AuthResult struct {
 }
 
 type AuthService struct {
-	userRepo       repositories.UserRepository
-	oauthAccountRepo repositories.OAuthAccountRepository
-	oauthProviders map[entities.OAuthProvider]infraoauth.Provider
-	oauthCfg       config.OAuthConfig
-	cfg            config.JWTConfig
-	logger         *zap.Logger
+	userRepo         repo.UserRepository
+	oauthAccountRepo repo.OAuthAccountRepository
+	oauthProviders   map[entities.OAuthProvider]infraoauth.Provider
+	oauthCfg         config.OAuthConfig
+	cfg              config.JWTConfig
+	logger           *zap.Logger
 }
 
 func NewAuthService(
-	userRepo repositories.UserRepository,
-	oauthAccountRepo repositories.OAuthAccountRepository,
+	userRepo repo.UserRepository,
+	oauthAccountRepo repo.OAuthAccountRepository,
 	oauthProviders map[entities.OAuthProvider]infraoauth.Provider,
 	oauthCfg config.OAuthConfig,
 	cfg config.JWTConfig,
@@ -58,12 +58,15 @@ func NewAuthService(
 func (s *AuthService) HandleRegister(ctx context.Context, in appdto.RegisterInput) (*AuthResult, error) {
 	email := strings.TrimSpace(strings.ToLower(in.Body.Email))
 
-	exists, err := s.userRepo.ExistsByEmail(ctx, email)
-	if err != nil {
-		return nil, fmt.Errorf("check email exists: %w", err)
-	}
-	if exists {
+	_, err := s.userRepo.FindOne(ctx, repo.Query{
+		Select: repo.SelectExists,
+		Where:  repo.Where{Email: &email},
+	})
+	if err == nil {
 		return nil, domain.ErrEmailAlreadyExists
+	}
+	if !errors.Is(err, domain.ErrUserNotFound) {
+		return nil, fmt.Errorf("check email exists: %w", err)
 	}
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(in.Body.Password), bcrypt.DefaultCost)
@@ -83,6 +86,7 @@ func (s *AuthService) HandleRegister(ctx context.Context, in appdto.RegisterInpu
 	if err := s.userRepo.Create(ctx, user); err != nil {
 		return nil, fmt.Errorf("create user: %w", err)
 	}
+	user.PasswordHash = nil
 
 	return s.issueAuthResult(user)
 }
@@ -90,7 +94,10 @@ func (s *AuthService) HandleRegister(ctx context.Context, in appdto.RegisterInpu
 func (s *AuthService) HandleLogin(ctx context.Context, in appdto.LoginInput) (*AuthResult, error) {
 	email := strings.TrimSpace(strings.ToLower(in.Body.Email))
 
-	user, err := s.userRepo.FindByEmail(ctx, email)
+	user, err := s.userRepo.FindOne(ctx, repo.Query{
+		Select: repo.SelectLogin,
+		Where:  repo.Where{Email: &email},
+	})
 	if err != nil {
 		if errors.Is(err, domain.ErrUserNotFound) {
 			return nil, domain.ErrInvalidCredentials
@@ -107,7 +114,7 @@ func (s *AuthService) HandleLogin(ctx context.Context, in appdto.LoginInput) (*A
 	}
 
 	now := time.Now().UTC()
-	if err := s.userRepo.UpdateLastLogin(ctx, user.ID, now); err != nil {
+	if err := s.userRepo.UpdateByID(ctx, user.ID, repo.Update{LastLoginAt: &now}); err != nil {
 		return nil, fmt.Errorf("update last login: %w", err)
 	}
 	user.LastLoginAt = &now
@@ -188,7 +195,7 @@ func (s *AuthService) handleSSOCallback(ctx context.Context, provider entities.O
 	}
 
 	now := time.Now().UTC()
-	if err := s.userRepo.UpdateLastLogin(ctx, user.ID, now); err != nil {
+	if err := s.userRepo.UpdateByID(ctx, user.ID, repo.Update{LastLoginAt: &now}); err != nil {
 		return nil, fmt.Errorf("update last login: %w", err)
 	}
 	user.LastLoginAt = &now
@@ -202,16 +209,23 @@ func (s *AuthService) resolveSSOUser(ctx context.Context, provider entities.OAut
 		return nil, fmt.Errorf("find oauth account: %w", err)
 	}
 	if existingOAuth != nil {
-		user, err := s.userRepo.FindByID(ctx, existingOAuth.UserID)
+		user, err := s.userRepo.FindByID(ctx, existingOAuth.UserID, repo.SelectProfile)
 		if err != nil {
 			return nil, fmt.Errorf("find linked user: %w", err)
 		}
 		return user, nil
 	}
 
-	user, err := s.userRepo.FindByEmail(ctx, info.Email)
+	user, err := s.userRepo.FindOne(ctx, repo.Query{
+		Select: repo.SelectProfile,
+		Where:  repo.Where{Email: &info.Email},
+	})
 	if err != nil && !errors.Is(err, domain.ErrUserNotFound) {
 		return nil, fmt.Errorf("find user by email: %w", err)
+	}
+
+	if errors.Is(err, domain.ErrUserNotFound) {
+		user = nil
 	}
 
 	if user == nil {
@@ -232,7 +246,7 @@ func (s *AuthService) resolveSSOUser(ctx context.Context, provider entities.OAut
 		}
 	} else if info.AvatarURL != nil && user.AvatarURL == nil {
 		user.AvatarURL = info.AvatarURL
-		if err := s.userRepo.Update(ctx, user); err != nil {
+		if err := s.userRepo.UpdateByID(ctx, user.ID, repo.Update{AvatarURL: user.AvatarURL}); err != nil {
 			return nil, fmt.Errorf("update user avatar: %w", err)
 		}
 	}

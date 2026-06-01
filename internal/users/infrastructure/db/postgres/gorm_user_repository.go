@@ -2,7 +2,6 @@ package postgres
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -35,47 +34,75 @@ func (r *GormUserRepository) Create(ctx context.Context, user *entities.User) er
 	return nil
 }
 
-func (r *GormUserRepository) FindByID(ctx context.Context, id string) (*entities.User, error) {
+func (r *GormUserRepository) FindByID(ctx context.Context, id string, fields ...repositories.UserFields) (*entities.User, error) {
+	f := repositories.SelectAll
+	if len(fields) > 0 {
+		f = fields[0]
+	}
+	return r.FindOne(ctx, repositories.Query{
+		Select: f,
+		Where:  repositories.Where{ID: &id},
+	})
+}
+
+func (r *GormUserRepository) FindOne(ctx context.Context, q repositories.Query) (*entities.User, error) {
 	var model userModel
-	err := r.db.WithContext(ctx).
-		Where("deleted_at IS NULL").
-		First(&model, "id = ?", id).Error
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+	db := applyWhere(r.db.WithContext(ctx), q.Where)
+	db = applySelect(db, q.Fields())
+
+	if err := db.First(&model).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
 			return nil, domain.ErrUserNotFound
 		}
-		return nil, fmt.Errorf("find user by id: %w", err)
+		return nil, fmt.Errorf("find user: %w", err)
 	}
 	return toEntity(&model), nil
 }
 
-func (r *GormUserRepository) FindByEmail(ctx context.Context, email string) (*entities.User, error) {
-	var model userModel
-	err := r.db.WithContext(ctx).
-		Where("deleted_at IS NULL").
-		Where("email = ?", email).
-		First(&model).Error
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, domain.ErrUserNotFound
-		}
-		return nil, fmt.Errorf("find user by email: %w", err)
+func (r *GormUserRepository) FindMany(ctx context.Context, q repositories.Query) ([]*entities.User, error) {
+	db := applyWhere(r.db.WithContext(ctx), q.Where)
+	db = applySelect(db, q.Fields())
+
+	var models []userModel
+	if err := db.Order("created_at DESC").Find(&models).Error; err != nil {
+		return nil, fmt.Errorf("find users: %w", err)
 	}
-	return toEntity(&model), nil
+	return toEntities(models), nil
 }
 
-func (r *GormUserRepository) Update(ctx context.Context, user *entities.User) error {
-	model := toModel(user)
+func (r *GormUserRepository) FindManyPaginate(ctx context.Context, q repositories.Query, page repositories.Page) (*repositories.PageResult, error) {
+	base := applyWhere(r.db.WithContext(ctx).Model(&userModel{}), q.Where)
+
+	var total int64
+	if err := base.Count(&total).Error; err != nil {
+		return nil, fmt.Errorf("count users: %w", err)
+	}
+
+	limit, offset := normalizePage(page)
+	db := applySelect(base, q.Fields())
+
+	var models []userModel
+	if err := db.Order("created_at DESC").Limit(limit).Offset(offset).Find(&models).Error; err != nil {
+		return nil, fmt.Errorf("find users: %w", err)
+	}
+
+	return &repositories.PageResult{
+		Items: toEntities(models),
+		Total: total,
+	}, nil
+}
+
+func (r *GormUserRepository) UpdateByID(ctx context.Context, id string, data repositories.Update) error {
+	values := updateToMap(data)
+	if len(values) == 0 {
+		return nil
+	}
+	values["updated_at"] = time.Now().UTC()
+
 	result := r.db.WithContext(ctx).
 		Model(&userModel{}).
-		Where("id = ? AND deleted_at IS NULL", user.ID).
-		Updates(map[string]interface{}{
-			"name":        model.Name,
-			"avatar_url":  model.AvatarURL,
-			"timezone":    model.Timezone,
-			"locale":      model.Locale,
-			"updated_at":  time.Now().UTC(),
-		})
+		Where("id = ? AND deleted_at IS NULL", id).
+		Updates(values)
 	if result.Error != nil {
 		return fmt.Errorf("update user: %w", result.Error)
 	}
@@ -85,16 +112,13 @@ func (r *GormUserRepository) Update(ctx context.Context, user *entities.User) er
 	return nil
 }
 
-func (r *GormUserRepository) UpdateLastLogin(ctx context.Context, id string, at time.Time) error {
+func (r *GormUserRepository) DeleteByID(ctx context.Context, id string) error {
 	result := r.db.WithContext(ctx).
 		Model(&userModel{}).
 		Where("id = ? AND deleted_at IS NULL", id).
-		Updates(map[string]interface{}{
-			"last_login_at": at,
-			"updated_at":    time.Now().UTC(),
-		})
+		Update("deleted_at", time.Now().UTC())
 	if result.Error != nil {
-		return fmt.Errorf("update last login: %w", result.Error)
+		return fmt.Errorf("delete user: %w", result.Error)
 	}
 	if result.RowsAffected == 0 {
 		return domain.ErrUserNotFound
@@ -102,17 +126,26 @@ func (r *GormUserRepository) UpdateLastLogin(ctx context.Context, id string, at 
 	return nil
 }
 
-func (r *GormUserRepository) ExistsByEmail(ctx context.Context, email string) (bool, error) {
-	var count int64
-	err := r.db.WithContext(ctx).
-		Model(&userModel{}).
-		Where("deleted_at IS NULL").
-		Where("email = ?", email).
-		Count(&count).Error
-	if err != nil {
-		return false, fmt.Errorf("exists by email: %w", err)
+// --- helpers ---
+
+func normalizePage(page repositories.Page) (int, int) {
+	limit := page.Limit
+	if limit <= 0 {
+		limit = 20
 	}
-	return count > 0, nil
+	offset := page.Offset
+	if offset < 0 {
+		offset = 0
+	}
+	return limit, offset
+}
+
+func toEntities(models []userModel) []*entities.User {
+	out := make([]*entities.User, len(models))
+	for i := range models {
+		out[i] = toEntity(&models[i])
+	}
+	return out
 }
 
 func toModel(user *entities.User) userModel {
