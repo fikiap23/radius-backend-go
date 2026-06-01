@@ -32,8 +32,8 @@ func (m *Module) wire(deps module.Dependencies) {
 		return
 	}
 
-	userRepo := postgres.NewGormUserRepository(deps.DB)
-	oauthRepo := postgres.NewGormOAuthAccountRepository(deps.DB)
+	userRepo := postgres.NewUserRepository(deps.Ent)
+	oauthRepo := postgres.NewOAuthAccountRepository(deps.Ent)
 	oauthProviders := oauth.NewRegistry(deps.Config.OAuth)
 
 	m.authSvc = services.NewAuthService(

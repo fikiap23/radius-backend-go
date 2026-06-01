@@ -45,7 +45,7 @@ func Run() error {
 	deps := module.Dependencies{
 		Config: cfg,
 		Logger: logger,
-		DB:     pg.DB,
+		Ent:    pg.Client,
 	}
 
 	authMiddleware := middleware.NewAuthMiddleware(cfg.JWT.SecretKey, logger)

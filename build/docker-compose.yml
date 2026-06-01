@@ -44,18 +44,19 @@ services:
       - radius-network
 
   migrate:
-    build:
-      context: ..
-      dockerfile: build/Dockerfile
+    image: arigaio/atlas:latest
     container_name: radius-migrate
     env_file: .env
+    working_dir: /app
     volumes:
       - ..:/app
-    command: >
-      migrate
-        -path /app/migrations
-        -database "postgres://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@postgres:5432/${DB_NAME:-radius}?sslmode=disable"
-        up
+    command:
+      - migrate
+      - apply
+      - --dir
+      - file:///app/migrations
+      - --url
+      - postgres://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@postgres:5432/${DB_NAME:-radius}?sslmode=disable
     depends_on:
       postgres:
         condition: service_healthy

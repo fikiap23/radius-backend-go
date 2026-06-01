@@ -1,4 +1,4 @@
-.PHONY: help build run test tidy fmt up down restart logs exec migrate clean
+.PHONY: help build run test tidy fmt up down restart logs exec migrate migrate-diff ent-generate clean
 
 MAIN          := ./cmd/api
 BINARY        := bin/radius-backend
@@ -23,7 +23,9 @@ help:
 	@echo "  make restart        - Restart app container, then follow logs"
 	@echo "  make logs           - Follow app container logs"
 	@echo "  make exec           - Shell into app container"
-	@echo "  make migrate        - Run golang-migrate up"
+	@echo "  make migrate        - Run atlas migrate apply"
+	@echo "  make migrate-diff   - Generate migration diff (NAME=... required)"
+	@echo "  make ent-generate   - Run Ent code generation"
 	@echo ""
 	@echo "  make clean          - Remove build artifacts"
 
@@ -61,8 +63,16 @@ logs:
 exec:
 	$(COMPOSE) exec app sh
 
+ent-generate:
+	go generate ./ent
+
 migrate:
 	$(COMPOSE) run --rm migrate
+
+migrate-diff:
+	@if [ -z "$(NAME)" ]; then echo "usage: make migrate-diff NAME=<migration_name>"; exit 1; fi
+	@if [ -z "$(ATLAS_DEV_URL)" ]; then echo "ATLAS_DEV_URL is required (e.g. postgres://user:pass@localhost:5432/dev?sslmode=disable)"; exit 1; fi
+	go run -mod=mod ent/migrate/diff/main.go $(NAME)
 
 clean:
 	rm -rf bin tmp

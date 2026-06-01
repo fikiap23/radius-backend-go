@@ -4,16 +4,16 @@ import (
 	"context"
 
 	"github.com/labstack/echo/v4"
+	"github.com/radius/radius-backend/ent"
 	"github.com/radius/radius-backend/internal/shared/config"
 	"github.com/radius/radius-backend/internal/shared/middleware"
 	"go.uber.org/zap"
-	"gorm.io/gorm"
 )
 
 type Dependencies struct {
 	Config *config.Config
 	Logger *zap.Logger
-	DB     *gorm.DB
+	Ent    *ent.Client
 }
 
 type BoundedContext interface {

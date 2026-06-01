@@ -3,10 +3,15 @@
 # =============================================================================
 FROM golang:1.26.1-alpine3.23
 
-RUN apk add --no-cache git curl make
+RUN apk add --no-cache git curl make ca-certificates
 
 RUN go install github.com/air-verse/air@latest
-RUN go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+
+# Install Atlas CLI to a fixed path (atlasgo.sh installer is unreliable in Alpine).
+RUN curl -fsSL "https://release.ariga.io/atlas/atlas-linux-amd64-latest" \
+      -o /usr/local/bin/atlas \
+    && chmod +x /usr/local/bin/atlas \
+    && atlas version
 
 RUN git config --global --add safe.directory /app
 

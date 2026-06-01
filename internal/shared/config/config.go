@@ -56,6 +56,13 @@ func (d DatabaseConfig) DSN() string {
 	)
 }
 
+func (d DatabaseConfig) URL() string {
+	return fmt.Sprintf(
+		"postgres://%s:%s@%s:%d/%s?sslmode=%s",
+		d.User, d.Password, d.Host, d.Port, d.Name, d.SSLMode,
+	)
+}
+
 type JWTConfig struct {
 	SecretKey string
 	Issuer    string

@@ -1,48 +1,41 @@
 package database
 
 import (
+	"database/sql"
 	"fmt"
 	"time"
 
+	"entgo.io/ent/dialect"
+	entsql "entgo.io/ent/dialect/sql"
+	_ "github.com/lib/pq"
+	"github.com/radius/radius-backend/ent"
 	"github.com/radius/radius-backend/internal/shared/config"
 	"go.uber.org/zap"
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
 )
 
 type Postgres struct {
-	DB     *gorm.DB
+	Client *ent.Client
 	logger *zap.Logger
+	sqlDB  *sql.DB
 }
 
 func NewPostgres(cfg config.DatabaseConfig, log *zap.Logger) (*Postgres, error) {
-	gormLogger := logger.Default.LogMode(logger.Silent)
-	if cfg.SSLMode == "disable" {
-		gormLogger = logger.Default.LogMode(logger.Warn)
-	}
-
-	db, err := gorm.Open(postgres.Open(cfg.DSN()), &gorm.Config{
-		Logger:      gormLogger,
-		PrepareStmt: true,
-	})
+	db, err := sql.Open("postgres", cfg.DSN())
 	if err != nil {
-		return nil, fmt.Errorf("gorm open: %w", err)
+		return nil, fmt.Errorf("open postgres: %w", err)
 	}
 
-	sqlDB, err := db.DB()
-	if err != nil {
-		return nil, fmt.Errorf("get sql.DB: %w", err)
-	}
+	db.SetMaxOpenConns(cfg.MaxOpenConns)
+	db.SetMaxIdleConns(cfg.MaxIdleConns)
+	db.SetConnMaxLifetime(cfg.ConnMaxLifetime)
+	db.SetConnMaxIdleTime(10 * time.Minute)
 
-	sqlDB.SetMaxOpenConns(cfg.MaxOpenConns)
-	sqlDB.SetMaxIdleConns(cfg.MaxIdleConns)
-	sqlDB.SetConnMaxLifetime(cfg.ConnMaxLifetime)
-	sqlDB.SetConnMaxIdleTime(10 * time.Minute)
-
-	if err := sqlDB.Ping(); err != nil {
+	if err := db.Ping(); err != nil {
 		return nil, fmt.Errorf("postgres ping failed: %w", err)
 	}
+
+	drv := entsql.OpenDB(dialect.Postgres, db)
+	client := ent.NewClient(ent.Driver(drv))
 
 	log.Info("connected to PostgreSQL",
 		zap.String("host", cfg.Host),
@@ -50,23 +43,16 @@ func NewPostgres(cfg config.DatabaseConfig, log *zap.Logger) (*Postgres, error) 
 		zap.String("database", cfg.Name),
 	)
 
-	return &Postgres{DB: db, logger: log}, nil
+	return &Postgres{Client: client, logger: log, sqlDB: db}, nil
 }
 
 func (p *Postgres) Close() {
-	sqlDB, err := p.DB.DB()
-	if err != nil {
-		p.logger.Error("failed to get sql.DB for close", zap.Error(err))
-		return
-	}
 	p.logger.Info("closing PostgreSQL connection pool")
-	sqlDB.Close()
+	if err := p.Client.Close(); err != nil {
+		p.logger.Error("failed closing ent client", zap.Error(err))
+	}
 }
 
 func (p *Postgres) HealthCheck() error {
-	sqlDB, err := p.DB.DB()
-	if err != nil {
-		return err
-	}
-	return sqlDB.Ping()
+	return p.sqlDB.Ping()
 }
