@@ -69,7 +69,7 @@ type BoundedContext interface {
 
 ## 4. API Conventions
 
-Response envelope: `{ "isSuccess", "message", "data" }`
+Success envelope: `{ "isSuccess", "message", "data" }`. Errors: `{ "error": { "type", "code", "message", "param?" } }` (Stripe-style).
 
 Auth header: `Authorization: Bearer <token>`
 

@@ -14,7 +14,7 @@ import (
 )
 
 var userErrors = []humaapi.ErrorMapping{
-	{Err: domain.ErrUserNotFound, Status: http.StatusNotFound, Message: "USER_NOT_FOUND"},
+	{Err: domain.ErrUserNotFound, Status: http.StatusNotFound, Code: "user_not_found", Message: "User not found.", Param: "id"},
 }
 
 func RegisterUsers(api huma.API, service *services.UserService, auth *appmiddleware.AuthMiddleware, logger *zap.Logger) {

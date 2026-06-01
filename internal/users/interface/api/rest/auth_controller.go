@@ -13,13 +13,13 @@ import (
 )
 
 var authErrors = []humaapi.ErrorMapping{
-	{Err: domain.ErrEmailAlreadyExists, Status: http.StatusConflict, Message: "EMAIL_ALREADY_EXISTS"},
-	{Err: domain.ErrInvalidCredentials, Status: http.StatusUnauthorized, Message: "INVALID_CREDENTIALS"},
-	{Err: domain.ErrSSOProviderDisabled, Status: http.StatusServiceUnavailable, Message: "SSO_PROVIDER_DISABLED"},
-	{Err: domain.ErrSSOInvalidState, Status: http.StatusBadRequest, Message: "SSO_INVALID_STATE"},
-	{Err: domain.ErrSSOInvalidRedirectURI, Status: http.StatusBadRequest, Message: "SSO_INVALID_REDIRECT_URI"},
-	{Err: domain.ErrSSOAuthenticationFailed, Status: http.StatusUnauthorized, Message: "SSO_AUTHENTICATION_FAILED"},
-	{Err: domain.ErrSSOGitHubEmailPermission, Status: http.StatusForbidden, Message: "SSO_GITHUB_EMAIL_PERMISSION"},
+	{Err: domain.ErrEmailAlreadyExists, Status: http.StatusConflict, Code: "email_already_exists", Message: "An account with this email already exists."},
+	{Err: domain.ErrInvalidCredentials, Status: http.StatusUnauthorized, Code: "invalid_credentials", Message: "Invalid email or password."},
+	{Err: domain.ErrSSOProviderDisabled, Status: http.StatusServiceUnavailable, Code: "sso_provider_disabled", Message: "This SSO provider is not configured."},
+	{Err: domain.ErrSSOInvalidState, Status: http.StatusBadRequest, Code: "sso_invalid_state", Message: "The SSO state parameter is invalid or expired."},
+	{Err: domain.ErrSSOInvalidRedirectURI, Status: http.StatusBadRequest, Code: "sso_invalid_redirect_uri", Message: "The redirect URI is not allowed."},
+	{Err: domain.ErrSSOAuthenticationFailed, Status: http.StatusUnauthorized, Code: "sso_authentication_failed", Message: "SSO authentication failed."},
+	{Err: domain.ErrSSOGitHubEmailPermission, Status: http.StatusForbidden, Code: "sso_github_email_permission", Message: "GitHub did not grant access to your email address."},
 }
 
 func RegisterAuth(api huma.API, service *services.AuthService, logger *zap.Logger) {

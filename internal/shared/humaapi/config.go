@@ -9,6 +9,9 @@ func NewConfig(cfg *config.Config) huma.Config {
 	hc := huma.DefaultConfig("Radius Backend API", "1.0.0")
 	hc.Info.Description = "Radius monolith API — auth and users."
 
+	// Disable $schema fields and Link: describedBy headers on success/error bodies.
+	hc.CreateHooks = nil
+
 	if cfg.App.Env == "production" {
 		hc.DocsPath = ""
 		hc.OpenAPIPath = ""
