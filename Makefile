@@ -1,4 +1,4 @@
-.PHONY: help build run test tidy fmt up down restart logs exec migrate migrate-hash migrate-diff ent-generate clean
+.PHONY: help build run test tidy fmt up down restart logs exec migrate migrate-hash migrate-diff ent-generate ent-clean clean
 
 DEV_DB := radius_dev
 
@@ -29,6 +29,7 @@ help:
 	@echo "  make migrate-hash   - Recompute migrations/atlas.sum (fix checksum mismatch)"
 	@echo "  make migrate-diff   - Generate SQL migration from Ent schema (NAME=... required, Docker)"
 	@echo "  make ent-generate   - Regenerate Ent client (Docker)"
+	@echo "  make ent-clean      - Remove generated Ent client + SQL migrations (keeps schema)"
 	@echo ""
 	@echo "  make clean          - Remove build artifacts"
 
@@ -68,6 +69,21 @@ exec:
 
 ent-generate:
 	$(COMPOSE) run --rm --no-deps app go generate ./ent
+
+# Removes generated Ent code and Atlas migrations. Keeps ent/schema, ent/generate.go, ent/migrate/diff.
+ent-clean:
+	@echo "Cleaning generated Ent client (keeping ent/schema, ent/generate.go, ent/migrate/diff)..."
+	@find ent -mindepth 1 \
+		! -path 'ent/schema' ! -path 'ent/schema/*' \
+		! -path 'ent/generate.go' \
+		! -path 'ent/migrate' ! -path 'ent/migrate/*' \
+		-exec rm -rf {} +
+	@find ent/migrate -mindepth 1 \
+		! -path 'ent/migrate/diff' ! -path 'ent/migrate/diff/*' \
+		-exec rm -rf {} + 2>/dev/null || true
+	@echo "Cleaning SQL migrations..."
+	@rm -f migrations/*.sql migrations/atlas.sum
+	@echo "Done. Regenerate with: make ent-generate && make migrate-diff NAME=<migration_name>"
 
 migrate:
 	$(COMPOSE) run --rm migrate

@@ -59,9 +59,6 @@ func (User) Fields() []ent.Field {
 			SchemaType(map[string]string{dialect.Postgres: "varchar(10)"}).
 			Default("en").
 			NotEmpty(),
-		field.Enum("status").
-			Values("active", "inactive").
-			Default("active"),
 		field.Time("created_at").
 			Default(time.Now).
 			Immutable(),
