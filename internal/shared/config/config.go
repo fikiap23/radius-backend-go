@@ -28,6 +28,13 @@ type HTTPConfig struct {
 	ReadTimeout     time.Duration
 	WriteTimeout    time.Duration
 	ShutdownTimeout time.Duration
+	CORS            CORSConfig
+}
+
+type CORSConfig struct {
+	AllowedOrigins []string
+	AllowMethods   []string
+	AllowHeaders   []string
 }
 
 type DatabaseConfig struct {
@@ -73,7 +80,6 @@ func Load() (*Config, error) {
 	v.SetConfigName("config")
 	v.SetConfigType("yaml")
 	v.AddConfigPath(".")
-	v.AddConfigPath("./configs")
 
 	v.SetEnvPrefix("RADIUS")
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
@@ -112,6 +118,7 @@ func Load() (*Config, error) {
 	}
 	cfg.OAuth.StateExpiry = oauthStateExpiry
 	normalizeAllowedRedirectURIs(v, &cfg.OAuth)
+	normalizeCORSLists(v, &cfg.HTTP.CORS)
 
 	if err := cfg.validate(); err != nil {
 		return nil, fmt.Errorf("config validation failed: %w", err)
@@ -129,6 +136,16 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("http.readtimeout", "15s")
 	v.SetDefault("http.writetimeout", "15s")
 	v.SetDefault("http.shutdowntimeout", "30s")
+	v.SetDefault("http.cors.allowedorigins", []string{
+		"http://localhost:3000",
+		"http://localhost:3001",
+	})
+	v.SetDefault("http.cors.allowmethods", []string{
+		"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS",
+	})
+	v.SetDefault("http.cors.allowheaders", []string{
+		"Accept", "Authorization", "Content-Type",
+	})
 
 	v.SetDefault("database.host", "localhost")
 	v.SetDefault("database.port", 5432)
@@ -222,4 +239,29 @@ func normalizeAllowedRedirectURIs(v *viper.Viper, oauth *OAuthConfig) {
 		}
 	}
 	oauth.AllowedRedirectURIs = uris
+}
+
+func normalizeCORSLists(v *viper.Viper, cors *CORSConfig) {
+	normalizeCommaSeparatedList(v, "http.cors.allowedorigins", &cors.AllowedOrigins)
+	normalizeCommaSeparatedList(v, "http.cors.allowmethods", &cors.AllowMethods)
+	normalizeCommaSeparatedList(v, "http.cors.allowheaders", &cors.AllowHeaders)
+}
+
+func normalizeCommaSeparatedList(v *viper.Viper, key string, target *[]string) {
+	raw := strings.TrimSpace(v.GetString(key))
+	if raw == "" {
+		return
+	}
+	if len(*target) == 1 && strings.Contains((*target)[0], ",") {
+		raw = (*target)[0]
+	}
+
+	parts := strings.Split(raw, ",")
+	items := make([]string, 0, len(parts))
+	for _, part := range parts {
+		if trimmed := strings.TrimSpace(part); trimmed != "" {
+			items = append(items, trimmed)
+		}
+	}
+	*target = items
 }

@@ -49,7 +49,7 @@ domain ← application ← infrastructure ← interface
 |-----------|----------|
 | Docker, `.env*` | `build/` only |
 | SQL migrations | `migrations/` |
-| Sample config | `configs/config.example.yaml` |
+| Sample config | `build/.env.example` |
 | New bounded context | `internal/<context>/` mirroring `users/` |
 
 ## 3. Bounded Contexts

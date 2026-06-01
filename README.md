@@ -40,9 +40,9 @@ Docs are generated at runtime from handler structs; no separate generate step. I
 Requires PostgreSQL and migrations applied:
 
 ```bash
-cp configs/config.example.yaml config.yaml
-# edit config.yaml with DB credentials and JWT secret
-make migrate  # or run migrate CLI manually
+cd build && cp .env.example .env
+# edit .env with DB credentials, JWT secret, OAuth, CORS origins
+make migrate
 make run
 ```
 
@@ -57,7 +57,6 @@ internal/
   shared/             Config, DB, middleware, humaapi, response
 migrations/           SQL migrations
 build/                Docker & env files
-configs/              Sample YAML config
 ```
 
 See `AGENTS.md` for architecture rules.

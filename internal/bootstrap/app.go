@@ -51,6 +51,7 @@ func Run() error {
 	e := echo.New()
 	e.HideBanner = true
 	e.HidePort = true
+	e.Use(middleware.CORS(cfg.HTTP.CORS))
 
 	contexts := []module.BoundedContext{
 		users.NewModule(),
