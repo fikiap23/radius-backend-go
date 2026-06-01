@@ -3,8 +3,21 @@ package dto
 import (
 	"time"
 
+	"github.com/radius/radius-backend/internal/shared/pagination"
 	"github.com/radius/radius-backend/internal/users/domain"
 )
+
+type ListUsersInput struct {
+	pagination.HTTPQuery
+}
+
+func (in ListUsersInput) Params() pagination.Params {
+	return in.HTTPQuery.ParamsWithSort("createdAt", "createdAt", "updatedAt", "name", "email")
+}
+
+type GetUserByIDInput struct {
+	ID string `path:"id" doc:"User ID" format:"uuid"`
+}
 
 type UserProfile struct {
 	ID              string     `json:"id"`

@@ -32,6 +32,8 @@ Docs are generated at runtime from handler structs; no separate generate step. I
 | GET | `/health` | No | Liveness |
 | POST | `/auth/register` | No | Register user |
 | POST | `/auth/login` | No | Login |
+| GET | `/users` | JWT | List users (`?page=1&perPage=20&search=...&sortBy=createdAt&sortDir=desc`) |
+| GET | `/users/{id}` | JWT | Get user by ID |
 | GET | `/users/me` | JWT | Current user profile |
 | PATCH | `/users/me` | JWT | Update profile |
 

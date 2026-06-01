@@ -3,12 +3,14 @@ package postgres
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
 	"github.com/radius/radius-backend/ent"
 	"github.com/radius/radius-backend/ent/predicate"
 	entuser "github.com/radius/radius-backend/ent/user"
+	"github.com/radius/radius-backend/internal/shared/pagination"
 	"github.com/radius/radius-backend/internal/users/domain"
 )
 
@@ -77,7 +79,7 @@ func (r *UserRepository) FindMany(ctx context.Context, q domain.Query) ([]*domai
 	return toDomainUsers(rows), nil
 }
 
-func (r *UserRepository) FindManyPaginate(ctx context.Context, q domain.Query, page domain.Page) (*domain.PageResult, error) {
+func (r *UserRepository) FindManyPaginate(ctx context.Context, q domain.Query, params pagination.Params) (*pagination.Result[*domain.User], error) {
 	base := r.activeUsers().Where(buildFilter(q.Filter)...)
 
 	total, err := base.Clone().Count(ctx)
@@ -85,20 +87,18 @@ func (r *UserRepository) FindManyPaginate(ctx context.Context, q domain.Query, p
 		return nil, fmt.Errorf("count users: %w", err)
 	}
 
-	limit, offset := normalizePage(page)
+	ol := params.OffsetLimit()
 	rows, err := base.
-		Order(entuser.ByCreatedAt(sql.OrderDesc())).
-		Limit(limit).
-		Offset(offset).
+		Order(userOrder(params.Sort)...).
+		Limit(ol.Limit).
+		Offset(ol.Offset).
 		All(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("find users: %w", err)
 	}
 
-	return &domain.PageResult{
-		Items: toDomainUsers(rows),
-		Total: int64(total),
-	}, nil
+	result := pagination.NewResult(toDomainUsers(rows), int64(total), params)
+	return &result, nil
 }
 
 func (r *UserRepository) UpdateByID(ctx context.Context, id string, data domain.Update) error {
@@ -146,7 +146,30 @@ func buildFilter(f domain.Filter) []predicate.User {
 	if f.Email != nil {
 		preds = append(preds, entuser.EmailEQ(*f.Email))
 	}
+	if search := strings.TrimSpace(f.Search); search != "" {
+		preds = append(preds, entuser.Or(
+			entuser.NameContainsFold(search),
+			entuser.EmailContainsFold(search),
+		))
+	}
 	return preds
+}
+
+func userOrder(sort pagination.Sort) []entuser.OrderOption {
+	dir := sql.OrderDesc()
+	if sort.IsAsc() {
+		dir = sql.OrderAsc()
+	}
+	switch sort.By {
+	case "name":
+		return []entuser.OrderOption{entuser.ByName(dir)}
+	case "email":
+		return []entuser.OrderOption{entuser.ByEmail(dir)}
+	case "updatedAt":
+		return []entuser.OrderOption{entuser.ByUpdatedAt(dir)}
+	default:
+		return []entuser.OrderOption{entuser.ByCreatedAt(dir)}
+	}
 }
 
 func applyUpdate(u *ent.UserUpdate, data domain.Update) *ent.UserUpdate {
@@ -159,16 +182,4 @@ func applyUpdate(u *ent.UserUpdate, data domain.Update) *ent.UserUpdate {
 		SetNillableLastLoginAt(data.LastLoginAt).
 		SetNillableTimezone(data.Timezone).
 		SetNillableLocale(data.Locale)
-}
-
-func normalizePage(page domain.Page) (int, int) {
-	limit := page.Limit
-	if limit <= 0 {
-		limit = 20
-	}
-	offset := page.Offset
-	if offset < 0 {
-		offset = 0
-	}
-	return limit, offset
 }

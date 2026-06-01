@@ -21,6 +21,22 @@ func RegisterUsers(api huma.API, svc *services.UserService, auth *middleware.Aut
 	authMW := humaapi.RequireAuth(auth, api)
 
 	huma.Register(api, huma.Operation{
+		OperationID: "users-list",
+		Method:      http.MethodGet,
+		Path:        "/users",
+		Summary:     "List users (paginated)",
+		Tags:        []string{"users"},
+		Security:    humaapi.BearerSecurity(),
+		Middlewares: huma.Middlewares{authMW},
+	}, func(ctx context.Context, in *dto.ListUsersInput) (*humaapi.OKOutput, error) {
+		page, err := svc.HandleListUsers(ctx, in.Params())
+		if err != nil {
+			return nil, humaapi.MapError(err, userErrors, logger)
+		}
+		return humaapi.OK(page), nil
+	})
+
+	huma.Register(api, huma.Operation{
 		OperationID: "users-get-me",
 		Method:      http.MethodGet,
 		Path:        "/users/me",
@@ -35,6 +51,22 @@ func RegisterUsers(api huma.API, svc *services.UserService, auth *middleware.Aut
 		}
 
 		profile, err := svc.HandleGetMe(ctx, userID)
+		if err != nil {
+			return nil, humaapi.MapError(err, userErrors, logger)
+		}
+		return humaapi.OK(profile), nil
+	})
+
+	huma.Register(api, huma.Operation{
+		OperationID: "users-get-by-id",
+		Method:      http.MethodGet,
+		Path:        "/users/{id}",
+		Summary:     "Get user by ID",
+		Tags:        []string{"users"},
+		Security:    humaapi.BearerSecurity(),
+		Middlewares: huma.Middlewares{authMW},
+	}, func(ctx context.Context, in *dto.GetUserByIDInput) (*humaapi.OKOutput, error) {
+		profile, err := svc.HandleGetByID(ctx, in.ID)
 		if err != nil {
 			return nil, humaapi.MapError(err, userErrors, logger)
 		}

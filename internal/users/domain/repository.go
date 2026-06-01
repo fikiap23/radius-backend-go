@@ -3,6 +3,8 @@ package domain
 import (
 	"context"
 	"time"
+
+	"github.com/radius/radius-backend/internal/shared/pagination"
 )
 
 // Fields represents a named column selection preset for user queries.
@@ -16,8 +18,9 @@ const (
 )
 
 type Filter struct {
-	ID    *string
-	Email *string
+	ID     *string
+	Email  *string
+	Search string // partial match on name or email (case-insensitive)
 }
 
 type Query struct {
@@ -36,22 +39,12 @@ type Update struct {
 	Locale          *string
 }
 
-type Page struct {
-	Limit  int
-	Offset int
-}
-
-type PageResult struct {
-	Items []*User
-	Total int64
-}
-
 type UserRepository interface {
 	Create(ctx context.Context, user *User) error
 	FindByID(ctx context.Context, id string, fields ...Fields) (*User, error)
 	FindOne(ctx context.Context, q Query) (*User, error)
 	FindMany(ctx context.Context, q Query) ([]*User, error)
-	FindManyPaginate(ctx context.Context, q Query, page Page) (*PageResult, error)
+	FindManyPaginate(ctx context.Context, q Query, params pagination.Params) (*pagination.Result[*User], error)
 	UpdateByID(ctx context.Context, id string, data Update) error
 	DeleteByID(ctx context.Context, id string) error
 }
