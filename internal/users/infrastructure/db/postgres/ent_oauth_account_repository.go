@@ -32,6 +32,9 @@ func (r *OAuthAccountRepository) Create(ctx context.Context, account *domain.OAu
 		SetProviderUserID(account.ProviderUserID).
 		Save(ctx)
 	if err != nil {
+		if mapped := mapOAuthAccountCreateError(err); mapped != err {
+			return mapped
+		}
 		return fmt.Errorf("create oauth account: %w", err)
 	}
 

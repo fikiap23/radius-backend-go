@@ -92,9 +92,10 @@ Register new contexts in [`internal/bootstrap/app.go`](internal/bootstrap/app.go
 
 ```go
 type Dependencies struct {
-    Config *config.Config
-    Logger *zap.Logger
-    Ent    *ent.Client
+    Config           *config.Config
+    Logger           *zap.Logger
+    Ent              *ent.Client
+    RunInTransaction RunInTransactionFunc // database.RunInTx wrapper
 }
 ```
 
@@ -147,6 +148,25 @@ make ent-generate   # go generate ./ent
 - **Field presets:** `domain.Fields` (`FieldsAll`, `FieldsProfile`, `FieldsLogin`, `FieldsExists`) for column selection intent (list/detail use profile fields).
 - **List filter:** `domain.Filter.Search` — case-insensitive partial match on `name` and `email` (`ContainsFold`).
 - **List sort:** driven by `pagination.Params.Sort`; user allowlist: `createdAt`, `updatedAt`, `name`, `email`.
+
+### Database transactions (monolith, one DB)
+
+Single primitive: [`internal/shared/database/transaction.go`](internal/shared/database/transaction.go) → `RunInTx`.
+
+Wired on [`module.Dependencies`](internal/module/module.go) as `RunInTransaction` (set in [`bootstrap/app.go`](internal/bootstrap/app.go)).
+
+| Use | How |
+|-----|-----|
+| Multi-write, one or more contexts | `deps.RunInTransaction(ctx, func(ctx, tx *ent.Client) error { ... })` |
+| Build repos in callback | `postgres.NewUserRepository(tx)`, etc. |
+| Cross-context orchestration | [`internal/coordination/`](internal/coordination/) (package doc has pattern) |
+
+**Performance / correctness**
+
+- Keep callbacks **short** — DB only (no HTTP, OAuth, sleep inside `RunInTransaction`).
+- Use transactions only for **atomic multi-write**; not for read-only list/get endpoints.
+- **Do not nest** `RunInTransaction` calls.
+- SSO: OAuth `Exchange` stays **outside** the transaction; DB link via `domain.RunUsersInTransactionFunc` wired in [`users/module.go`](internal/users/module.go) (composition root builds repos from `tx`; application does not import postgres/ent).
 
 ---
 
@@ -335,7 +355,7 @@ Register literal paths like `/users/me` **before** `/users/{id}` in the same con
 | Application | `application/dto/` | Huma input/output, `MapUserProfile`, `ToDomain()` |
 | Infrastructure | `infrastructure/db/postgres/` | Ent repositories |
 | Infrastructure | `infrastructure/oauth/` | Google/GitHub `SSOProvider` adapters |
-| Domain | `domain/sso.go`, `domain/unit_of_work.go` | SSO port, transactional repos |
+| Domain | `domain/sso.go`, `domain/transaction.go` | SSO port; `UsersRepositories` + `RunUsersInTransactionFunc` |
 | Interface | `interface/api/rest/` | `RegisterAuth`, `RegisterUsers`, `RegisterHealth` |
 
 ### Domain errors (map in controllers)
@@ -456,4 +476,6 @@ internal/<name>/
 | Table schema | `ent/schema/` |
 | SQL migration | `migrations/` |
 | Shared JWT/CORS/pagination | `internal/shared/` |
+| DB transactions (`RunInTx`) | `internal/shared/database/transaction.go` |
+| Cross-context use cases (one TX) | `internal/coordination/` |
 | Env / Docker | `build/` only |

@@ -5,10 +5,12 @@ import (
 
 	"github.com/danielgtaylor/huma/v2/adapters/humaecho"
 	"github.com/labstack/echo/v4"
+	"github.com/radius/radius-backend/ent"
 	"github.com/radius/radius-backend/internal/module"
 	"github.com/radius/radius-backend/internal/shared/humaapi"
 	"github.com/radius/radius-backend/internal/shared/middleware"
 	"github.com/radius/radius-backend/internal/users/application/services"
+	"github.com/radius/radius-backend/internal/users/domain"
 	"github.com/radius/radius-backend/internal/users/infrastructure/db/postgres"
 	"github.com/radius/radius-backend/internal/users/infrastructure/oauth"
 	"github.com/radius/radius-backend/internal/users/interface/api/rest"
@@ -33,12 +35,20 @@ func (m *Module) wire(deps module.Dependencies) {
 	}
 
 	userRepo := postgres.NewUserRepository(deps.Ent)
-	uow := postgres.NewUnitOfWork(deps.Ent)
 	oauthProviders := oauth.NewRegistry(deps.Config.OAuth)
+
+	runUsersTx := func(ctx context.Context, fn func(context.Context, domain.UsersRepositories) error) error {
+		return deps.RunInTransaction(ctx, func(ctx context.Context, tx *ent.Client) error {
+			return fn(ctx, domain.UsersRepositories{
+				Users:         postgres.NewUserRepository(tx),
+				OAuthAccounts: postgres.NewOAuthAccountRepository(tx),
+			})
+		})
+	}
 
 	m.authSvc = services.NewAuthService(
 		userRepo,
-		uow,
+		runUsersTx,
 		oauthProviders,
 		deps.Config.OAuth,
 		deps.Config.JWT,

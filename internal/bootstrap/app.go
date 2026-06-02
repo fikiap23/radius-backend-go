@@ -11,6 +11,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 	echomw "github.com/labstack/echo/v4/middleware"
+	"github.com/radius/radius-backend/ent"
 	"github.com/radius/radius-backend/internal/module"
 	"github.com/radius/radius-backend/internal/shared/config"
 	"github.com/radius/radius-backend/internal/shared/database"
@@ -46,6 +47,9 @@ func Run() error {
 		Config: cfg,
 		Logger: logger,
 		Ent:    pg.Client,
+		RunInTransaction: func(ctx context.Context, fn func(context.Context, *ent.Client) error) error {
+			return database.RunInTx(ctx, pg.Client, fn)
+		},
 	}
 
 	authMiddleware := middleware.NewAuthMiddleware(cfg.JWT.SecretKey, logger)

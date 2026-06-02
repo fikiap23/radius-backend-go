@@ -37,6 +37,9 @@ func (r *UserRepository) Create(ctx context.Context, u *domain.User) error {
 		SetLocale(u.Locale).
 		Save(ctx)
 	if err != nil {
+		if mapped := mapUserCreateError(err); mapped != err {
+			return mapped
+		}
 		return fmt.Errorf("create user: %w", err)
 	}
 	u.CreatedAt = created.CreatedAt

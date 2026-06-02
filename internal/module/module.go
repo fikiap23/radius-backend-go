@@ -10,10 +10,17 @@ import (
 	"go.uber.org/zap"
 )
 
+// RunInTransactionFunc runs fn inside a single DB transaction (see database.RunInTx).
+type RunInTransactionFunc func(
+	ctx context.Context,
+	fn func(ctx context.Context, tx *ent.Client) error,
+) error
+
 type Dependencies struct {
-	Config *config.Config
-	Logger *zap.Logger
-	Ent    *ent.Client
+	Config           *config.Config
+	Logger           *zap.Logger
+	Ent              *ent.Client
+	RunInTransaction RunInTransactionFunc
 }
 
 type BoundedContext interface {
