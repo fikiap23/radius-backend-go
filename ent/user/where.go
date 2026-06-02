@@ -793,6 +793,29 @@ func HasOauthAccountsWith(preds ...predicate.UserOAuthAccount) predicate.User {
 	})
 }
 
+// HasWorkspaceMembers applies the HasEdge predicate on the "workspace_members" edge.
+func HasWorkspaceMembers() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, WorkspaceMembersTable, WorkspaceMembersColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasWorkspaceMembersWith applies the HasEdge predicate on the "workspace_members" edge with a given conditions (other predicates).
+func HasWorkspaceMembersWith(preds ...predicate.WorkspaceMember) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := newWorkspaceMembersStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.User) predicate.User {
 	return predicate.User(sql.AndPredicates(predicates...))

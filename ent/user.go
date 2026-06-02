@@ -49,9 +49,11 @@ type User struct {
 type UserEdges struct {
 	// OauthAccounts holds the value of the oauth_accounts edge.
 	OauthAccounts []*UserOAuthAccount `json:"oauth_accounts,omitempty"`
+	// WorkspaceMembers holds the value of the workspace_members edge.
+	WorkspaceMembers []*WorkspaceMember `json:"workspace_members,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [1]bool
+	loadedTypes [2]bool
 }
 
 // OauthAccountsOrErr returns the OauthAccounts value or an error if the edge
@@ -61,6 +63,15 @@ func (e UserEdges) OauthAccountsOrErr() ([]*UserOAuthAccount, error) {
 		return e.OauthAccounts, nil
 	}
 	return nil, &NotLoadedError{edge: "oauth_accounts"}
+}
+
+// WorkspaceMembersOrErr returns the WorkspaceMembers value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) WorkspaceMembersOrErr() ([]*WorkspaceMember, error) {
+	if e.loadedTypes[1] {
+		return e.WorkspaceMembers, nil
+	}
+	return nil, &NotLoadedError{edge: "workspace_members"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -181,6 +192,11 @@ func (u *User) Value(name string) (ent.Value, error) {
 // QueryOauthAccounts queries the "oauth_accounts" edge of the User entity.
 func (u *User) QueryOauthAccounts() *UserOAuthAccountQuery {
 	return NewUserClient(u.config).QueryOauthAccounts(u)
+}
+
+// QueryWorkspaceMembers queries the "workspace_members" edge of the User entity.
+func (u *User) QueryWorkspaceMembers() *WorkspaceMemberQuery {
+	return NewUserClient(u.config).QueryWorkspaceMembers(u)
 }
 
 // Update returns a builder for updating this User.

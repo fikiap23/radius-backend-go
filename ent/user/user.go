@@ -38,6 +38,8 @@ const (
 	FieldDeletedAt = "deleted_at"
 	// EdgeOauthAccounts holds the string denoting the oauth_accounts edge name in mutations.
 	EdgeOauthAccounts = "oauth_accounts"
+	// EdgeWorkspaceMembers holds the string denoting the workspace_members edge name in mutations.
+	EdgeWorkspaceMembers = "workspace_members"
 	// Table holds the table name of the user in the database.
 	Table = "users"
 	// OauthAccountsTable is the table that holds the oauth_accounts relation/edge.
@@ -47,6 +49,13 @@ const (
 	OauthAccountsInverseTable = "user_oauth_accounts"
 	// OauthAccountsColumn is the table column denoting the oauth_accounts relation/edge.
 	OauthAccountsColumn = "user_id"
+	// WorkspaceMembersTable is the table that holds the workspace_members relation/edge.
+	WorkspaceMembersTable = "workspace_members"
+	// WorkspaceMembersInverseTable is the table name for the WorkspaceMember entity.
+	// It exists in this package in order to avoid circular dependency with the "workspacemember" package.
+	WorkspaceMembersInverseTable = "workspace_members"
+	// WorkspaceMembersColumn is the table column denoting the workspace_members relation/edge.
+	WorkspaceMembersColumn = "user_id"
 )
 
 // Columns holds all SQL columns for user fields.
@@ -170,10 +179,31 @@ func ByOauthAccounts(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newOauthAccountsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByWorkspaceMembersCount orders the results by workspace_members count.
+func ByWorkspaceMembersCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newWorkspaceMembersStep(), opts...)
+	}
+}
+
+// ByWorkspaceMembers orders the results by workspace_members terms.
+func ByWorkspaceMembers(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newWorkspaceMembersStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newOauthAccountsStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(OauthAccountsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, OauthAccountsTable, OauthAccountsColumn),
+	)
+}
+func newWorkspaceMembersStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(WorkspaceMembersInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, WorkspaceMembersTable, WorkspaceMembersColumn),
 	)
 }

@@ -14,6 +14,8 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/radius/radius-backend/ent/user"
 	"github.com/radius/radius-backend/ent/useroauthaccount"
+	"github.com/radius/radius-backend/ent/workspace"
+	"github.com/radius/radius-backend/ent/workspacemember"
 )
 
 // ent aliases to avoid import conflicts in user's code.
@@ -76,6 +78,8 @@ func checkColumn(table, column string) error {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
 			user.Table:             user.ValidColumn,
 			useroauthaccount.Table: useroauthaccount.ValidColumn,
+			workspace.Table:        workspace.ValidColumn,
+			workspacemember.Table:  workspacemember.ValidColumn,
 		})
 	})
 	return columnCheck(table, column)

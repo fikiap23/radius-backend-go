@@ -16,6 +16,10 @@ type Tx struct {
 	User *UserClient
 	// UserOAuthAccount is the client for interacting with the UserOAuthAccount builders.
 	UserOAuthAccount *UserOAuthAccountClient
+	// Workspace is the client for interacting with the Workspace builders.
+	Workspace *WorkspaceClient
+	// WorkspaceMember is the client for interacting with the WorkspaceMember builders.
+	WorkspaceMember *WorkspaceMemberClient
 
 	// lazily loaded.
 	client     *Client
@@ -149,6 +153,8 @@ func (tx *Tx) Client() *Client {
 func (tx *Tx) init() {
 	tx.User = NewUserClient(tx.config)
 	tx.UserOAuthAccount = NewUserOAuthAccountClient(tx.config)
+	tx.Workspace = NewWorkspaceClient(tx.config)
+	tx.WorkspaceMember = NewWorkspaceMemberClient(tx.config)
 }
 
 // txDriver wraps the given dialect.Tx with a nop dialect.Driver implementation.

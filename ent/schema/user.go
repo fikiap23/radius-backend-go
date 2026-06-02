@@ -75,6 +75,8 @@ func (User) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.To("oauth_accounts", UserOAuthAccount.Type).
 			Annotations(entsql.OnDelete(entsql.Cascade)),
+		edge.To("workspace_members", WorkspaceMember.Type).
+			Annotations(entsql.OnDelete(entsql.Cascade)),
 	}
 }
 

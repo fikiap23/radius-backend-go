@@ -15,16 +15,18 @@ import (
 	"github.com/radius/radius-backend/ent/predicate"
 	"github.com/radius/radius-backend/ent/user"
 	"github.com/radius/radius-backend/ent/useroauthaccount"
+	"github.com/radius/radius-backend/ent/workspacemember"
 )
 
 // UserQuery is the builder for querying User entities.
 type UserQuery struct {
 	config
-	ctx               *QueryContext
-	order             []user.OrderOption
-	inters            []Interceptor
-	predicates        []predicate.User
-	withOauthAccounts *UserOAuthAccountQuery
+	ctx                  *QueryContext
+	order                []user.OrderOption
+	inters               []Interceptor
+	predicates           []predicate.User
+	withOauthAccounts    *UserOAuthAccountQuery
+	withWorkspaceMembers *WorkspaceMemberQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -76,6 +78,28 @@ func (uq *UserQuery) QueryOauthAccounts() *UserOAuthAccountQuery {
 			sqlgraph.From(user.Table, user.FieldID, selector),
 			sqlgraph.To(useroauthaccount.Table, useroauthaccount.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, user.OauthAccountsTable, user.OauthAccountsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(uq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryWorkspaceMembers chains the current query on the "workspace_members" edge.
+func (uq *UserQuery) QueryWorkspaceMembers() *WorkspaceMemberQuery {
+	query := (&WorkspaceMemberClient{config: uq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := uq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := uq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(workspacemember.Table, workspacemember.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.WorkspaceMembersTable, user.WorkspaceMembersColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(uq.driver.Dialect(), step)
 		return fromU, nil
@@ -270,12 +294,13 @@ func (uq *UserQuery) Clone() *UserQuery {
 		return nil
 	}
 	return &UserQuery{
-		config:            uq.config,
-		ctx:               uq.ctx.Clone(),
-		order:             append([]user.OrderOption{}, uq.order...),
-		inters:            append([]Interceptor{}, uq.inters...),
-		predicates:        append([]predicate.User{}, uq.predicates...),
-		withOauthAccounts: uq.withOauthAccounts.Clone(),
+		config:               uq.config,
+		ctx:                  uq.ctx.Clone(),
+		order:                append([]user.OrderOption{}, uq.order...),
+		inters:               append([]Interceptor{}, uq.inters...),
+		predicates:           append([]predicate.User{}, uq.predicates...),
+		withOauthAccounts:    uq.withOauthAccounts.Clone(),
+		withWorkspaceMembers: uq.withWorkspaceMembers.Clone(),
 		// clone intermediate query.
 		sql:  uq.sql.Clone(),
 		path: uq.path,
@@ -290,6 +315,17 @@ func (uq *UserQuery) WithOauthAccounts(opts ...func(*UserOAuthAccountQuery)) *Us
 		opt(query)
 	}
 	uq.withOauthAccounts = query
+	return uq
+}
+
+// WithWorkspaceMembers tells the query-builder to eager-load the nodes that are connected to
+// the "workspace_members" edge. The optional arguments are used to configure the query builder of the edge.
+func (uq *UserQuery) WithWorkspaceMembers(opts ...func(*WorkspaceMemberQuery)) *UserQuery {
+	query := (&WorkspaceMemberClient{config: uq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	uq.withWorkspaceMembers = query
 	return uq
 }
 
@@ -371,8 +407,9 @@ func (uq *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, e
 	var (
 		nodes       = []*User{}
 		_spec       = uq.querySpec()
-		loadedTypes = [1]bool{
+		loadedTypes = [2]bool{
 			uq.withOauthAccounts != nil,
+			uq.withWorkspaceMembers != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -397,6 +434,13 @@ func (uq *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, e
 		if err := uq.loadOauthAccounts(ctx, query, nodes,
 			func(n *User) { n.Edges.OauthAccounts = []*UserOAuthAccount{} },
 			func(n *User, e *UserOAuthAccount) { n.Edges.OauthAccounts = append(n.Edges.OauthAccounts, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := uq.withWorkspaceMembers; query != nil {
+		if err := uq.loadWorkspaceMembers(ctx, query, nodes,
+			func(n *User) { n.Edges.WorkspaceMembers = []*WorkspaceMember{} },
+			func(n *User, e *WorkspaceMember) { n.Edges.WorkspaceMembers = append(n.Edges.WorkspaceMembers, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -428,6 +472,39 @@ func (uq *UserQuery) loadOauthAccounts(ctx context.Context, query *UserOAuthAcco
 		node, ok := nodeids[fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "user_id" returned %v for node %v`, fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (uq *UserQuery) loadWorkspaceMembers(ctx context.Context, query *WorkspaceMemberQuery, nodes []*User, init func(*User), assign func(*User, *WorkspaceMember)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[string]*User)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(workspacemember.FieldUserID)
+	}
+	query.Where(predicate.WorkspaceMember(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(user.WorkspaceMembersColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.UserID
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "user_id" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "user_id" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

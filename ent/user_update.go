@@ -14,6 +14,7 @@ import (
 	"github.com/radius/radius-backend/ent/predicate"
 	"github.com/radius/radius-backend/ent/user"
 	"github.com/radius/radius-backend/ent/useroauthaccount"
+	"github.com/radius/radius-backend/ent/workspacemember"
 )
 
 // UserUpdate is the builder for updating User entities.
@@ -212,6 +213,21 @@ func (uu *UserUpdate) AddOauthAccounts(u ...*UserOAuthAccount) *UserUpdate {
 	return uu.AddOauthAccountIDs(ids...)
 }
 
+// AddWorkspaceMemberIDs adds the "workspace_members" edge to the WorkspaceMember entity by IDs.
+func (uu *UserUpdate) AddWorkspaceMemberIDs(ids ...string) *UserUpdate {
+	uu.mutation.AddWorkspaceMemberIDs(ids...)
+	return uu
+}
+
+// AddWorkspaceMembers adds the "workspace_members" edges to the WorkspaceMember entity.
+func (uu *UserUpdate) AddWorkspaceMembers(w ...*WorkspaceMember) *UserUpdate {
+	ids := make([]string, len(w))
+	for i := range w {
+		ids[i] = w[i].ID
+	}
+	return uu.AddWorkspaceMemberIDs(ids...)
+}
+
 // Mutation returns the UserMutation object of the builder.
 func (uu *UserUpdate) Mutation() *UserMutation {
 	return uu.mutation
@@ -236,6 +252,27 @@ func (uu *UserUpdate) RemoveOauthAccounts(u ...*UserOAuthAccount) *UserUpdate {
 		ids[i] = u[i].ID
 	}
 	return uu.RemoveOauthAccountIDs(ids...)
+}
+
+// ClearWorkspaceMembers clears all "workspace_members" edges to the WorkspaceMember entity.
+func (uu *UserUpdate) ClearWorkspaceMembers() *UserUpdate {
+	uu.mutation.ClearWorkspaceMembers()
+	return uu
+}
+
+// RemoveWorkspaceMemberIDs removes the "workspace_members" edge to WorkspaceMember entities by IDs.
+func (uu *UserUpdate) RemoveWorkspaceMemberIDs(ids ...string) *UserUpdate {
+	uu.mutation.RemoveWorkspaceMemberIDs(ids...)
+	return uu
+}
+
+// RemoveWorkspaceMembers removes "workspace_members" edges to WorkspaceMember entities.
+func (uu *UserUpdate) RemoveWorkspaceMembers(w ...*WorkspaceMember) *UserUpdate {
+	ids := make([]string, len(w))
+	for i := range w {
+		ids[i] = w[i].ID
+	}
+	return uu.RemoveWorkspaceMemberIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -392,6 +429,51 @@ func (uu *UserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(useroauthaccount.FieldID, field.TypeString),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if uu.mutation.WorkspaceMembersCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.WorkspaceMembersTable,
+			Columns: []string{user.WorkspaceMembersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(workspacemember.FieldID, field.TypeString),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uu.mutation.RemovedWorkspaceMembersIDs(); len(nodes) > 0 && !uu.mutation.WorkspaceMembersCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.WorkspaceMembersTable,
+			Columns: []string{user.WorkspaceMembersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(workspacemember.FieldID, field.TypeString),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uu.mutation.WorkspaceMembersIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.WorkspaceMembersTable,
+			Columns: []string{user.WorkspaceMembersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(workspacemember.FieldID, field.TypeString),
 			},
 		}
 		for _, k := range nodes {
@@ -602,6 +684,21 @@ func (uuo *UserUpdateOne) AddOauthAccounts(u ...*UserOAuthAccount) *UserUpdateOn
 	return uuo.AddOauthAccountIDs(ids...)
 }
 
+// AddWorkspaceMemberIDs adds the "workspace_members" edge to the WorkspaceMember entity by IDs.
+func (uuo *UserUpdateOne) AddWorkspaceMemberIDs(ids ...string) *UserUpdateOne {
+	uuo.mutation.AddWorkspaceMemberIDs(ids...)
+	return uuo
+}
+
+// AddWorkspaceMembers adds the "workspace_members" edges to the WorkspaceMember entity.
+func (uuo *UserUpdateOne) AddWorkspaceMembers(w ...*WorkspaceMember) *UserUpdateOne {
+	ids := make([]string, len(w))
+	for i := range w {
+		ids[i] = w[i].ID
+	}
+	return uuo.AddWorkspaceMemberIDs(ids...)
+}
+
 // Mutation returns the UserMutation object of the builder.
 func (uuo *UserUpdateOne) Mutation() *UserMutation {
 	return uuo.mutation
@@ -626,6 +723,27 @@ func (uuo *UserUpdateOne) RemoveOauthAccounts(u ...*UserOAuthAccount) *UserUpdat
 		ids[i] = u[i].ID
 	}
 	return uuo.RemoveOauthAccountIDs(ids...)
+}
+
+// ClearWorkspaceMembers clears all "workspace_members" edges to the WorkspaceMember entity.
+func (uuo *UserUpdateOne) ClearWorkspaceMembers() *UserUpdateOne {
+	uuo.mutation.ClearWorkspaceMembers()
+	return uuo
+}
+
+// RemoveWorkspaceMemberIDs removes the "workspace_members" edge to WorkspaceMember entities by IDs.
+func (uuo *UserUpdateOne) RemoveWorkspaceMemberIDs(ids ...string) *UserUpdateOne {
+	uuo.mutation.RemoveWorkspaceMemberIDs(ids...)
+	return uuo
+}
+
+// RemoveWorkspaceMembers removes "workspace_members" edges to WorkspaceMember entities.
+func (uuo *UserUpdateOne) RemoveWorkspaceMembers(w ...*WorkspaceMember) *UserUpdateOne {
+	ids := make([]string, len(w))
+	for i := range w {
+		ids[i] = w[i].ID
+	}
+	return uuo.RemoveWorkspaceMemberIDs(ids...)
 }
 
 // Where appends a list predicates to the UserUpdate builder.
@@ -812,6 +930,51 @@ func (uuo *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) 
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(useroauthaccount.FieldID, field.TypeString),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if uuo.mutation.WorkspaceMembersCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.WorkspaceMembersTable,
+			Columns: []string{user.WorkspaceMembersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(workspacemember.FieldID, field.TypeString),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uuo.mutation.RemovedWorkspaceMembersIDs(); len(nodes) > 0 && !uuo.mutation.WorkspaceMembersCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.WorkspaceMembersTable,
+			Columns: []string{user.WorkspaceMembersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(workspacemember.FieldID, field.TypeString),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uuo.mutation.WorkspaceMembersIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.WorkspaceMembersTable,
+			Columns: []string{user.WorkspaceMembersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(workspacemember.FieldID, field.TypeString),
 			},
 		}
 		for _, k := range nodes {

@@ -11,3 +11,9 @@ type User func(*sql.Selector)
 
 // UserOAuthAccount is the predicate function for useroauthaccount builders.
 type UserOAuthAccount func(*sql.Selector)
+
+// Workspace is the predicate function for workspace builders.
+type Workspace func(*sql.Selector)
+
+// WorkspaceMember is the predicate function for workspacemember builders.
+type WorkspaceMember func(*sql.Selector)

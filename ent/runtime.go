@@ -8,6 +8,8 @@ import (
 	"github.com/radius/radius-backend/ent/schema"
 	"github.com/radius/radius-backend/ent/user"
 	"github.com/radius/radius-backend/ent/useroauthaccount"
+	"github.com/radius/radius-backend/ent/workspace"
+	"github.com/radius/radius-backend/ent/workspacemember"
 )
 
 // The init function reads all schema descriptors with runtime code
@@ -68,4 +70,52 @@ func init() {
 	useroauthaccountDescID := useroauthaccountFields[0].Descriptor()
 	// useroauthaccount.DefaultID holds the default value on creation for the id field.
 	useroauthaccount.DefaultID = useroauthaccountDescID.Default.(string)
+	workspaceFields := schema.Workspace{}.Fields()
+	_ = workspaceFields
+	// workspaceDescName is the schema descriptor for name field.
+	workspaceDescName := workspaceFields[1].Descriptor()
+	// workspace.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	workspace.NameValidator = workspaceDescName.Validators[0].(func(string) error)
+	// workspaceDescSlug is the schema descriptor for slug field.
+	workspaceDescSlug := workspaceFields[2].Descriptor()
+	// workspace.SlugValidator is a validator for the "slug" field. It is called by the builders before save.
+	workspace.SlugValidator = workspaceDescSlug.Validators[0].(func(string) error)
+	// workspaceDescCreatedAt is the schema descriptor for created_at field.
+	workspaceDescCreatedAt := workspaceFields[3].Descriptor()
+	// workspace.DefaultCreatedAt holds the default value on creation for the created_at field.
+	workspace.DefaultCreatedAt = workspaceDescCreatedAt.Default.(func() time.Time)
+	// workspaceDescUpdatedAt is the schema descriptor for updated_at field.
+	workspaceDescUpdatedAt := workspaceFields[4].Descriptor()
+	// workspace.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	workspace.DefaultUpdatedAt = workspaceDescUpdatedAt.Default.(func() time.Time)
+	// workspace.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	workspace.UpdateDefaultUpdatedAt = workspaceDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// workspaceDescID is the schema descriptor for id field.
+	workspaceDescID := workspaceFields[0].Descriptor()
+	// workspace.DefaultID holds the default value on creation for the id field.
+	workspace.DefaultID = workspaceDescID.Default.(string)
+	workspacememberFields := schema.WorkspaceMember{}.Fields()
+	_ = workspacememberFields
+	// workspacememberDescName is the schema descriptor for name field.
+	workspacememberDescName := workspacememberFields[3].Descriptor()
+	// workspacemember.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	workspacemember.NameValidator = workspacememberDescName.Validators[0].(func(string) error)
+	// workspacememberDescEmail is the schema descriptor for email field.
+	workspacememberDescEmail := workspacememberFields[4].Descriptor()
+	// workspacemember.EmailValidator is a validator for the "email" field. It is called by the builders before save.
+	workspacemember.EmailValidator = workspacememberDescEmail.Validators[0].(func(string) error)
+	// workspacememberDescCreatedAt is the schema descriptor for created_at field.
+	workspacememberDescCreatedAt := workspacememberFields[7].Descriptor()
+	// workspacemember.DefaultCreatedAt holds the default value on creation for the created_at field.
+	workspacemember.DefaultCreatedAt = workspacememberDescCreatedAt.Default.(func() time.Time)
+	// workspacememberDescUpdatedAt is the schema descriptor for updated_at field.
+	workspacememberDescUpdatedAt := workspacememberFields[8].Descriptor()
+	// workspacemember.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	workspacemember.DefaultUpdatedAt = workspacememberDescUpdatedAt.Default.(func() time.Time)
+	// workspacemember.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	workspacemember.UpdateDefaultUpdatedAt = workspacememberDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// workspacememberDescID is the schema descriptor for id field.
+	workspacememberDescID := workspacememberFields[0].Descriptor()
+	// workspacemember.DefaultID holds the default value on creation for the id field.
+	workspacemember.DefaultID = workspacememberDescID.Default.(string)
 }

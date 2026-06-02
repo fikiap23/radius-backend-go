@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/radius/radius-backend/ent/user"
 	"github.com/radius/radius-backend/ent/useroauthaccount"
+	"github.com/radius/radius-backend/ent/workspacemember"
 )
 
 // UserCreate is the builder for creating a User entity.
@@ -188,6 +189,21 @@ func (uc *UserCreate) AddOauthAccounts(u ...*UserOAuthAccount) *UserCreate {
 	return uc.AddOauthAccountIDs(ids...)
 }
 
+// AddWorkspaceMemberIDs adds the "workspace_members" edge to the WorkspaceMember entity by IDs.
+func (uc *UserCreate) AddWorkspaceMemberIDs(ids ...string) *UserCreate {
+	uc.mutation.AddWorkspaceMemberIDs(ids...)
+	return uc
+}
+
+// AddWorkspaceMembers adds the "workspace_members" edges to the WorkspaceMember entity.
+func (uc *UserCreate) AddWorkspaceMembers(w ...*WorkspaceMember) *UserCreate {
+	ids := make([]string, len(w))
+	for i := range w {
+		ids[i] = w[i].ID
+	}
+	return uc.AddWorkspaceMemberIDs(ids...)
+}
+
 // Mutation returns the UserMutation object of the builder.
 func (uc *UserCreate) Mutation() *UserMutation {
 	return uc.mutation
@@ -361,6 +377,22 @@ func (uc *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(useroauthaccount.FieldID, field.TypeString),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := uc.mutation.WorkspaceMembersIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.WorkspaceMembersTable,
+			Columns: []string{user.WorkspaceMembersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(workspacemember.FieldID, field.TypeString),
 			},
 		}
 		for _, k := range nodes {

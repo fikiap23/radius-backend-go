@@ -72,10 +72,75 @@ var (
 			},
 		},
 	}
+	// WorkspacesColumns holds the columns for the "workspaces" table.
+	WorkspacesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, SchemaType: map[string]string{"postgres": "uuid"}},
+		{Name: "name", Type: field.TypeString},
+		{Name: "slug", Type: field.TypeString, Unique: true, SchemaType: map[string]string{"postgres": "varchar(255)"}},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+	}
+	// WorkspacesTable holds the schema information for the "workspaces" table.
+	WorkspacesTable = &schema.Table{
+		Name:       "workspaces",
+		Columns:    WorkspacesColumns,
+		PrimaryKey: []*schema.Column{WorkspacesColumns[0]},
+	}
+	// WorkspaceMembersColumns holds the columns for the "workspace_members" table.
+	WorkspaceMembersColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, SchemaType: map[string]string{"postgres": "uuid"}},
+		{Name: "name", Type: field.TypeString},
+		{Name: "email", Type: field.TypeString, SchemaType: map[string]string{"postgres": "citext"}},
+		{Name: "role", Type: field.TypeEnum, Enums: []string{"owner", "admin", "member", "viewer"}},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"active", "pending"}},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "user_id", Type: field.TypeString, Nullable: true, SchemaType: map[string]string{"postgres": "uuid"}},
+		{Name: "workspace_id", Type: field.TypeString, SchemaType: map[string]string{"postgres": "uuid"}},
+	}
+	// WorkspaceMembersTable holds the schema information for the "workspace_members" table.
+	WorkspaceMembersTable = &schema.Table{
+		Name:       "workspace_members",
+		Columns:    WorkspaceMembersColumns,
+		PrimaryKey: []*schema.Column{WorkspaceMembersColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "workspace_members_users_workspace_members",
+				Columns:    []*schema.Column{WorkspaceMembersColumns[7]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "workspace_members_workspaces_members",
+				Columns:    []*schema.Column{WorkspaceMembersColumns[8]},
+				RefColumns: []*schema.Column{WorkspacesColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "workspacemember_workspace_id",
+				Unique:  false,
+				Columns: []*schema.Column{WorkspaceMembersColumns[8]},
+			},
+			{
+				Name:    "workspacemember_user_id",
+				Unique:  false,
+				Columns: []*schema.Column{WorkspaceMembersColumns[7]},
+			},
+			{
+				Name:    "workspacemember_workspace_id_email",
+				Unique:  true,
+				Columns: []*schema.Column{WorkspaceMembersColumns[8], WorkspaceMembersColumns[2]},
+			},
+		},
+	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
 		UsersTable,
 		UserOauthAccountsTable,
+		WorkspacesTable,
+		WorkspaceMembersTable,
 	}
 )
 
@@ -89,5 +154,13 @@ func init() {
 	UserOauthAccountsTable.ForeignKeys[0].RefTable = UsersTable
 	UserOauthAccountsTable.Annotation = &entsql.Annotation{
 		Table: "user_oauth_accounts",
+	}
+	WorkspacesTable.Annotation = &entsql.Annotation{
+		Table: "workspaces",
+	}
+	WorkspaceMembersTable.ForeignKeys[0].RefTable = UsersTable
+	WorkspaceMembersTable.ForeignKeys[1].RefTable = WorkspacesTable
+	WorkspaceMembersTable.Annotation = &entsql.Annotation{
+		Table: "workspace_members",
 	}
 }
