@@ -3,11 +3,10 @@ package users
 import (
 	"context"
 
-	"github.com/danielgtaylor/huma/v2/adapters/humaecho"
+	"github.com/danielgtaylor/huma/v2"
 	"github.com/labstack/echo/v4"
 	"github.com/radius/radius-backend/ent"
 	"github.com/radius/radius-backend/internal/module"
-	"github.com/radius/radius-backend/internal/shared/humaapi"
 	"github.com/radius/radius-backend/internal/shared/middleware"
 	"github.com/radius/radius-backend/internal/users/application/services"
 	"github.com/radius/radius-backend/internal/users/domain"
@@ -57,10 +56,8 @@ func (m *Module) wire(deps module.Dependencies) {
 	m.userSvc = services.NewUserService(userRepo, deps.Logger)
 }
 
-func (m *Module) RegisterHTTP(e *echo.Echo, deps module.Dependencies, auth *middleware.AuthMiddleware) {
+func (m *Module) RegisterHTTP(e *echo.Echo, api huma.API, deps module.Dependencies, auth *middleware.AuthMiddleware) {
 	m.wire(deps)
-
-	api := humaecho.New(e, humaapi.NewConfig(deps.Config))
 
 	rest.RegisterHealth(api)
 	rest.RegisterAuth(api, m.authSvc, deps.Logger)

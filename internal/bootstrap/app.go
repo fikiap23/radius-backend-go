@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/danielgtaylor/huma/v2/adapters/humaecho"
 	"github.com/labstack/echo/v4"
 	echomw "github.com/labstack/echo/v4/middleware"
 	"github.com/radius/radius-backend/ent"
@@ -16,8 +17,10 @@ import (
 	"github.com/radius/radius-backend/internal/shared/config"
 	"github.com/radius/radius-backend/internal/shared/database"
 	"github.com/radius/radius-backend/internal/shared/httplog"
+	"github.com/radius/radius-backend/internal/shared/humaapi"
 	"github.com/radius/radius-backend/internal/shared/middleware"
 	"github.com/radius/radius-backend/internal/users"
+	"github.com/radius/radius-backend/internal/workspaces"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -64,13 +67,16 @@ func Run() error {
 		middleware.CORS(cfg.HTTP.CORS),
 	)
 
+	api := humaecho.New(e, humaapi.NewConfig(cfg))
+
 	contexts := []module.BoundedContext{
 		users.NewModule(),
+		workspaces.NewModule(),
 	}
 
 	var messagingStops []func()
 	for _, bc := range contexts {
-		bc.RegisterHTTP(e, deps, authMiddleware)
+		bc.RegisterHTTP(e, api, deps, authMiddleware)
 		stopFn, err := bc.StartMessaging(ctx, deps)
 		if err != nil {
 			return fmt.Errorf("start messaging %s: %w", bc.Name(), err)

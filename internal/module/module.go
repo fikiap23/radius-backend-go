@@ -3,6 +3,7 @@ package module
 import (
 	"context"
 
+	"github.com/danielgtaylor/huma/v2"
 	"github.com/labstack/echo/v4"
 	"github.com/radius/radius-backend/ent"
 	"github.com/radius/radius-backend/internal/shared/config"
@@ -25,6 +26,6 @@ type Dependencies struct {
 
 type BoundedContext interface {
 	Name() string
-	RegisterHTTP(e *echo.Echo, deps Dependencies, auth *middleware.AuthMiddleware)
+	RegisterHTTP(e *echo.Echo, api huma.API, deps Dependencies, auth *middleware.AuthMiddleware)
 	StartMessaging(ctx context.Context, deps Dependencies) (stop func(), err error)
 }
