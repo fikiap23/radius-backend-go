@@ -19,7 +19,7 @@ type googleProvider struct {
 	oauth2 *oauth2.Config
 }
 
-func NewGoogleProvider(cfg config.OAuthProviderConfig) Provider {
+func NewGoogleProvider(cfg config.OAuthProviderConfig) domain.SSOProvider {
 	return &googleProvider{
 		cfg: cfg,
 		oauth2: &oauth2.Config{
@@ -45,7 +45,7 @@ func (p *googleProvider) AuthURL(state, redirectURI string) string {
 	return cfg.AuthCodeURL(state, oauth2.AccessTypeOnline)
 }
 
-func (p *googleProvider) Exchange(ctx context.Context, code, redirectURI string) (*UserInfo, error) {
+func (p *googleProvider) Exchange(ctx context.Context, code, redirectURI string) (*domain.OAuthUserInfo, error) {
 	cfg := *p.oauth2
 	cfg.RedirectURL = redirectURI
 
@@ -81,7 +81,7 @@ func (p *googleProvider) Exchange(ctx context.Context, code, redirectURI string)
 		return nil, fmt.Errorf("google userinfo missing id or email")
 	}
 
-	info := &UserInfo{
+	info := &domain.OAuthUserInfo{
 		ProviderUserID: payload.ID,
 		Email:          strings.ToLower(strings.TrimSpace(payload.Email)),
 		Name:           strings.TrimSpace(payload.Name),

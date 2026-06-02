@@ -334,7 +334,8 @@ Register literal paths like `/users/me` **before** `/users/{id}` in the same con
 | Application | `application/services/` | `AuthService`, `UserService` — `Handle*` methods only |
 | Application | `application/dto/` | Huma input/output, `MapUserProfile`, `ToDomain()` |
 | Infrastructure | `infrastructure/db/postgres/` | Ent repositories |
-| Infrastructure | `infrastructure/oauth/` | Google/GitHub `Provider` registry |
+| Infrastructure | `infrastructure/oauth/` | Google/GitHub `SSOProvider` adapters |
+| Domain | `domain/sso.go`, `domain/unit_of_work.go` | SSO port, transactional repos |
 | Interface | `interface/api/rest/` | `RegisterAuth`, `RegisterUsers`, `RegisterHealth` |
 
 ### Domain errors (map in controllers)
@@ -344,6 +345,7 @@ Register literal paths like `/users/me` **before** `/users/{id}` in the same con
 | `ErrUserNotFound` | 404 |
 | `ErrEmailAlreadyExists` | 409 |
 | `ErrInvalidCredentials` | 401 |
+| `ErrOAuthAccountNotFound` | (internal; not mapped to HTTP) |
 | `ErrSSOProviderDisabled` | 503 |
 | `ErrSSOInvalidState` | 400 |
 | `ErrSSOInvalidRedirectURI` | 400 |

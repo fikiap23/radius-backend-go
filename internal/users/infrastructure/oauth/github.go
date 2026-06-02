@@ -20,7 +20,7 @@ type githubProvider struct {
 	oauth2 *oauth2.Config
 }
 
-func NewGitHubProvider(cfg config.OAuthProviderConfig) Provider {
+func NewGitHubProvider(cfg config.OAuthProviderConfig) domain.SSOProvider {
 	return &githubProvider{
 		cfg: cfg,
 		oauth2: &oauth2.Config{
@@ -46,7 +46,7 @@ func (p *githubProvider) AuthURL(state, redirectURI string) string {
 	return cfg.AuthCodeURL(state)
 }
 
-func (p *githubProvider) Exchange(ctx context.Context, code, redirectURI string) (*UserInfo, error) {
+func (p *githubProvider) Exchange(ctx context.Context, code, redirectURI string) (*domain.OAuthUserInfo, error) {
 	cfg := *p.oauth2
 	cfg.RedirectURL = redirectURI
 
@@ -101,7 +101,7 @@ func (p *githubProvider) Exchange(ctx context.Context, code, redirectURI string)
 		name = strings.Split(email, "@")[0]
 	}
 
-	info := &UserInfo{
+	info := &domain.OAuthUserInfo{
 		ProviderUserID: strconv.FormatInt(userPayload.ID, 10),
 		Email:          email,
 		Name:           name,

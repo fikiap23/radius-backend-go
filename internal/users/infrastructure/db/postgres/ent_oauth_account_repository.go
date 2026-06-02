@@ -53,7 +53,7 @@ func (r *OAuthAccountRepository) FindByProviderAccount(
 		First(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
-			return nil, nil
+			return nil, domain.ErrOAuthAccountNotFound
 		}
 		return nil, fmt.Errorf("find oauth account: %w", err)
 	}

@@ -14,15 +14,14 @@ import (
 	appoauth "github.com/radius/radius-backend/internal/shared/oauth"
 	"github.com/radius/radius-backend/internal/users/application/dto"
 	"github.com/radius/radius-backend/internal/users/domain"
-	"github.com/radius/radius-backend/internal/users/infrastructure/oauth"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type AuthService struct {
 	userRepo       domain.UserRepository
-	oauthRepo      domain.OAuthAccountRepository
-	oauthProviders map[domain.OAuthProvider]oauth.Provider
+	uow            domain.UnitOfWork
+	oauthProviders map[domain.OAuthProvider]domain.SSOProvider
 	oauthCfg       config.OAuthConfig
 	jwtCfg         config.JWTConfig
 	logger         *zap.Logger
@@ -30,15 +29,15 @@ type AuthService struct {
 
 func NewAuthService(
 	userRepo domain.UserRepository,
-	oauthRepo domain.OAuthAccountRepository,
-	oauthProviders map[domain.OAuthProvider]oauth.Provider,
+	uow domain.UnitOfWork,
+	oauthProviders map[domain.OAuthProvider]domain.SSOProvider,
 	oauthCfg config.OAuthConfig,
 	jwtCfg config.JWTConfig,
 	logger *zap.Logger,
 ) *AuthService {
 	return &AuthService{
 		userRepo:       userRepo,
-		oauthRepo:      oauthRepo,
+		uow:            uow,
 		oauthProviders: oauthProviders,
 		oauthCfg:       oauthCfg,
 		jwtCfg:         jwtCfg,
@@ -194,65 +193,75 @@ func (s *AuthService) handleSSOCallback(ctx context.Context, provider domain.OAu
 	return s.issueAuthResult(user)
 }
 
-func (s *AuthService) resolveSSOUser(ctx context.Context, provider domain.OAuthProvider, info *oauth.UserInfo) (*domain.User, error) {
-	existing, err := s.oauthRepo.FindByProviderAccount(ctx, provider, info.ProviderUserID)
-	if err != nil {
-		return nil, fmt.Errorf("find oauth account: %w", err)
-	}
-	if existing != nil {
-		user, err := s.userRepo.FindByID(ctx, existing.UserID, domain.FieldsProfile)
-		if err != nil {
-			return nil, fmt.Errorf("find linked user: %w", err)
-		}
-		return user, nil
-	}
+func (s *AuthService) resolveSSOUser(ctx context.Context, provider domain.OAuthProvider, info *domain.OAuthUserInfo) (*domain.User, error) {
+	var resolved *domain.User
 
-	user, err := s.userRepo.FindOne(ctx, domain.Query{
-		Select: domain.FieldsProfile,
-		Filter: domain.Filter{Email: &info.Email},
+	err := s.uow.Do(ctx, func(ctx context.Context, repos domain.UsersRepositories) error {
+		existing, err := repos.OAuthAccounts.FindByProviderAccount(ctx, provider, info.ProviderUserID)
+		if err != nil && !errors.Is(err, domain.ErrOAuthAccountNotFound) {
+			return fmt.Errorf("find oauth account: %w", err)
+		}
+		if err == nil {
+			user, err := repos.Users.FindByID(ctx, existing.UserID, domain.FieldsProfile)
+			if err != nil {
+				return fmt.Errorf("find linked user: %w", err)
+			}
+			resolved = user
+			return nil
+		}
+
+		user, err := repos.Users.FindOne(ctx, domain.Query{
+			Select: domain.FieldsProfile,
+			Filter: domain.Filter{Email: &info.Email},
+		})
+		if err != nil && !errors.Is(err, domain.ErrUserNotFound) {
+			return fmt.Errorf("find user by email: %w", err)
+		}
+		if errors.Is(err, domain.ErrUserNotFound) {
+			user = nil
+		}
+
+		if user == nil {
+			user = &domain.User{
+				ID:        uuid.NewString(),
+				Name:      info.Name,
+				Email:     info.Email,
+				AvatarURL: info.AvatarURL,
+				Locale:    "en",
+			}
+			if info.EmailVerified {
+				now := time.Now().UTC()
+				user.EmailVerifiedAt = &now
+			}
+			if err := repos.Users.Create(ctx, user); err != nil {
+				return fmt.Errorf("create sso user: %w", err)
+			}
+		} else if info.AvatarURL != nil && user.AvatarURL == nil {
+			user.AvatarURL = info.AvatarURL
+			if err := repos.Users.UpdateByID(ctx, user.ID, domain.Update{AvatarURL: user.AvatarURL}); err != nil {
+				return fmt.Errorf("update user avatar: %w", err)
+			}
+		}
+
+		if err := repos.OAuthAccounts.Create(ctx, &domain.OAuthAccount{
+			UserID:         user.ID,
+			Provider:       provider,
+			ProviderUserID: info.ProviderUserID,
+		}); err != nil {
+			return fmt.Errorf("link oauth account: %w", err)
+		}
+
+		resolved = user
+		return nil
 	})
-	if err != nil && !errors.Is(err, domain.ErrUserNotFound) {
-		return nil, fmt.Errorf("find user by email: %w", err)
+	if err != nil {
+		return nil, err
 	}
-	if errors.Is(err, domain.ErrUserNotFound) {
-		user = nil
-	}
-
-	if user == nil {
-		user = &domain.User{
-			ID:        uuid.NewString(),
-			Name:      info.Name,
-			Email:     info.Email,
-			AvatarURL: info.AvatarURL,
-			Locale:    "en",
-		}
-		if info.EmailVerified {
-			now := time.Now().UTC()
-			user.EmailVerifiedAt = &now
-		}
-		if err := s.userRepo.Create(ctx, user); err != nil {
-			return nil, fmt.Errorf("create sso user: %w", err)
-		}
-	} else if info.AvatarURL != nil && user.AvatarURL == nil {
-		user.AvatarURL = info.AvatarURL
-		if err := s.userRepo.UpdateByID(ctx, user.ID, domain.Update{AvatarURL: user.AvatarURL}); err != nil {
-			return nil, fmt.Errorf("update user avatar: %w", err)
-		}
-	}
-
-	if err := s.oauthRepo.Create(ctx, &domain.OAuthAccount{
-		UserID:         user.ID,
-		Provider:       provider,
-		ProviderUserID: info.ProviderUserID,
-	}); err != nil {
-		return nil, fmt.Errorf("link oauth account: %w", err)
-	}
-
-	return user, nil
+	return resolved, nil
 }
 
-func (s *AuthService) requireEnabledProvider(provider domain.OAuthProvider) (oauth.Provider, error) {
-	p, err := oauth.GetProvider(s.oauthProviders, provider)
+func (s *AuthService) requireEnabledProvider(provider domain.OAuthProvider) (domain.SSOProvider, error) {
+	p, err := domain.SSOProviderFrom(s.oauthProviders, provider)
 	if err != nil {
 		return nil, err
 	}

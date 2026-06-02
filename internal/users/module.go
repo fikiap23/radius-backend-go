@@ -33,12 +33,12 @@ func (m *Module) wire(deps module.Dependencies) {
 	}
 
 	userRepo := postgres.NewUserRepository(deps.Ent)
-	oauthRepo := postgres.NewOAuthAccountRepository(deps.Ent)
+	uow := postgres.NewUnitOfWork(deps.Ent)
 	oauthProviders := oauth.NewRegistry(deps.Config.OAuth)
 
 	m.authSvc = services.NewAuthService(
 		userRepo,
-		oauthRepo,
+		uow,
 		oauthProviders,
 		deps.Config.OAuth,
 		deps.Config.JWT,
