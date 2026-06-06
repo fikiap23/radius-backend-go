@@ -8,6 +8,7 @@ import (
 	"github.com/radius/radius-backend/ent"
 	"github.com/radius/radius-backend/internal/shared/config"
 	"github.com/radius/radius-backend/internal/shared/middleware"
+	storagedomain "github.com/radius/radius-backend/internal/storage/domain"
 	"go.uber.org/zap"
 )
 
@@ -22,6 +23,7 @@ type Dependencies struct {
 	Logger           *zap.Logger
 	Ent              *ent.Client
 	RunInTransaction RunInTransactionFunc
+	ObjectStorage    storagedomain.ObjectStorage
 }
 
 type BoundedContext interface {

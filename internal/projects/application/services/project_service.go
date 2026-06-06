@@ -9,25 +9,30 @@ import (
 	"github.com/google/uuid"
 	"github.com/radius/radius-backend/internal/projects/application/dto"
 	"github.com/radius/radius-backend/internal/projects/domain"
+	"github.com/radius/radius-backend/internal/shared/storage"
+	storagedomain "github.com/radius/radius-backend/internal/storage/domain"
 	wsdomain "github.com/radius/radius-backend/internal/workspaces/domain"
 	"go.uber.org/zap"
 )
 
 type ProjectService struct {
-	projectRepo domain.ProjectRepository
-	memberRepo  wsdomain.WorkspaceMemberRepository
-	logger      *zap.Logger
+	projectRepo   domain.ProjectRepository
+	memberRepo    wsdomain.WorkspaceMemberRepository
+	objectStorage storagedomain.ObjectStorage
+	logger        *zap.Logger
 }
 
 func NewProjectService(
 	projectRepo domain.ProjectRepository,
 	memberRepo wsdomain.WorkspaceMemberRepository,
+	objectStorage storagedomain.ObjectStorage,
 	logger *zap.Logger,
 ) *ProjectService {
 	return &ProjectService{
-		projectRepo: projectRepo,
-		memberRepo:  memberRepo,
-		logger:      logger,
+		projectRepo:   projectRepo,
+		memberRepo:    memberRepo,
+		objectStorage: objectStorage,
+		logger:        logger,
 	}
 }
 
@@ -57,6 +62,11 @@ func (s *ProjectService) HandleCreateProject(
 		return nil, err
 	}
 
+	coverImageURL, err := s.resolveCoverImageURL(ctx, in.Body.CoverImageTempKey, in.Body.CoverImageURL)
+	if err != nil {
+		return nil, err
+	}
+
 	project := &domain.Project{
 		ID:            uuid.NewString(),
 		WorkspaceID:   workspaceID,
@@ -64,7 +74,7 @@ func (s *ProjectService) HandleCreateProject(
 		Description:   in.Body.Description,
 		Icon:          "🚀",
 		Cover:         domain.ProjectCoverEmerald,
-		CoverImageURL: in.Body.CoverImageURL,
+		CoverImageURL: coverImageURL,
 		Status:        domain.ProjectStatusActive,
 	}
 
@@ -103,6 +113,15 @@ func (s *ProjectService) HandleUpdateProject(
 		return nil, err
 	}
 
+	coverImageURL, err := s.resolveCoverImageURL(ctx, data.CoverImageTempKey, data.CoverImageURL)
+	if err != nil {
+		return nil, err
+	}
+	if coverImageURL != nil {
+		data.CoverImageURL = coverImageURL
+	}
+	data.CoverImageTempKey = nil
+
 	if err := s.projectRepo.UpdateByID(ctx, projectID, data); err != nil {
 		if errors.Is(err, domain.ErrProjectNotFound) {
 			return nil, domain.ErrProjectNotFound
@@ -116,6 +135,17 @@ func (s *ProjectService) HandleUpdateProject(
 	}
 	out := dto.MapProject(updated)
 	return &out, nil
+}
+
+func (s *ProjectService) resolveCoverImageURL(ctx context.Context, tempKey, directURL *string) (*string, error) {
+	if key := storage.TrimTempKey(tempKey); key != "" {
+		publicURL, err := s.objectStorage.PromoteProjectCover(ctx, key)
+		if err != nil {
+			return nil, err
+		}
+		return &publicURL, nil
+	}
+	return directURL, nil
 }
 
 func (s *ProjectService) HandleToggleFavorite(

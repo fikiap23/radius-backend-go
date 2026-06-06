@@ -36,6 +36,7 @@ func (m *Module) wire(deps module.Dependencies) {
 	m.projectSvc = services.NewProjectService(
 		projectRepo,
 		memberRepo,
+		deps.ObjectStorage,
 		deps.Logger,
 	)
 }

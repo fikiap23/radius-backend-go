@@ -73,12 +73,13 @@ type WorkspaceProjectsPathInput struct {
 type CreateProjectInput struct {
 	WorkspaceID string `path:"workspaceId" doc:"Workspace ID" format:"uuid"`
 	Body        struct {
-		Name          string  `json:"name" doc:"Project name" minLength:"1" maxLength:"255"`
-		Description   *string `json:"description,omitempty" doc:"Project description (HTML)"`
-		Icon          *string `json:"icon,omitempty" doc:"Emoji or icon identifier" minLength:"1"`
-		Cover         *string `json:"cover,omitempty" doc:"Cover theme" enum:"emerald,ocean,sunset,violet,rose,slate"`
-		CoverImageURL *string `json:"coverImageUrl,omitempty" doc:"Custom cover image URL"`
-		Status        *string `json:"status,omitempty" doc:"Project status" enum:"active,on_hold,completed"`
+		Name              string  `json:"name" doc:"Project name" minLength:"1" maxLength:"255"`
+		Description       *string `json:"description,omitempty" doc:"Project description (HTML)"`
+		Icon              *string `json:"icon,omitempty" doc:"Emoji or icon identifier" minLength:"1"`
+		Cover             *string `json:"cover,omitempty" doc:"Cover theme" enum:"emerald,ocean,sunset,violet,rose,slate"`
+		CoverImageURL     *string `json:"coverImageUrl,omitempty" doc:"Custom cover image URL"`
+		CoverImageTempKey *string `json:"coverImageTempKey,omitempty" doc:"Temp object key from POST /storage/presign-upload (purpose=project_cover)" maxLength:"512"`
+		Status            *string `json:"status,omitempty" doc:"Project status" enum:"active,on_hold,completed"`
 	}
 }
 
@@ -89,23 +90,25 @@ type ProjectPathInput struct {
 type UpdateProjectInput struct {
 	ProjectID string `path:"projectId" doc:"Project ID" format:"uuid"`
 	Body      struct {
-		Name          *string `json:"name,omitempty" doc:"Project name" minLength:"1" maxLength:"255"`
-		Description   *string `json:"description,omitempty" doc:"Project description (HTML)"`
-		Icon          *string `json:"icon,omitempty" doc:"Emoji or icon identifier" minLength:"1"`
-		Cover         *string `json:"cover,omitempty" doc:"Cover theme" enum:"emerald,ocean,sunset,violet,rose,slate"`
-		CoverImageURL *string `json:"coverImageUrl,omitempty" doc:"Custom cover image URL"`
-		Status        *string `json:"status,omitempty" doc:"Project status" enum:"active,on_hold,completed"`
-		IsFavorite    *bool   `json:"isFavorite,omitempty" doc:"Whether project is favorited"`
+		Name              *string `json:"name,omitempty" doc:"Project name" minLength:"1" maxLength:"255"`
+		Description       *string `json:"description,omitempty" doc:"Project description (HTML)"`
+		Icon              *string `json:"icon,omitempty" doc:"Emoji or icon identifier" minLength:"1"`
+		Cover             *string `json:"cover,omitempty" doc:"Cover theme" enum:"emerald,ocean,sunset,violet,rose,slate"`
+		CoverImageURL     *string `json:"coverImageUrl,omitempty" doc:"Custom cover image URL"`
+		CoverImageTempKey *string `json:"coverImageTempKey,omitempty" doc:"Temp object key from POST /storage/presign-upload (purpose=project_cover)" maxLength:"512"`
+		Status            *string `json:"status,omitempty" doc:"Project status" enum:"active,on_hold,completed"`
+		IsFavorite        *bool   `json:"isFavorite,omitempty" doc:"Whether project is favorited"`
 	}
 }
 
 func (in *UpdateProjectInput) ToDomain() domain.ProjectUpdateData {
 	data := domain.ProjectUpdateData{
-		Name:          in.Body.Name,
-		Description:   in.Body.Description,
-		Icon:          in.Body.Icon,
-		CoverImageURL: in.Body.CoverImageURL,
-		IsFavorite:    in.Body.IsFavorite,
+		Name:              in.Body.Name,
+		Description:       in.Body.Description,
+		Icon:              in.Body.Icon,
+		CoverImageURL:     in.Body.CoverImageURL,
+		CoverImageTempKey: in.Body.CoverImageTempKey,
+		IsFavorite:        in.Body.IsFavorite,
 	}
 	if in.Body.Cover != nil {
 		c := domain.ProjectCover(*in.Body.Cover)

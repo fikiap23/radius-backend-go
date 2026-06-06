@@ -19,7 +19,10 @@ import (
 	"github.com/radius/radius-backend/internal/shared/httplog"
 	"github.com/radius/radius-backend/internal/shared/humaapi"
 	"github.com/radius/radius-backend/internal/shared/middleware"
+	sharedstorage "github.com/radius/radius-backend/internal/shared/storage"
 	"github.com/radius/radius-backend/internal/projects"
+	"github.com/radius/radius-backend/internal/storage"
+	storageminio "github.com/radius/radius-backend/internal/storage/infrastructure/minio"
 	"github.com/radius/radius-backend/internal/users"
 	"github.com/radius/radius-backend/internal/workspaces"
 	"go.uber.org/zap"
@@ -47,10 +50,17 @@ func Run() error {
 	}
 	defer pg.Close()
 
+	minioClient, err := sharedstorage.NewClient(cfg.MinIO)
+	if err != nil {
+		return fmt.Errorf("connect minio: %w", err)
+	}
+	objectStorage := storageminio.NewObjectStorage(minioClient)
+
 	deps := module.Dependencies{
-		Config: cfg,
-		Logger: logger,
-		Ent:    pg.Client,
+		Config:        cfg,
+		Logger:        logger,
+		Ent:           pg.Client,
+		ObjectStorage: objectStorage,
 		RunInTransaction: func(ctx context.Context, fn func(context.Context, *ent.Client) error) error {
 			return database.RunInTx(ctx, pg.Client, fn)
 		},
@@ -74,6 +84,7 @@ func Run() error {
 		users.NewModule(),
 		workspaces.NewModule(),
 		projects.NewModule(),
+		storage.NewModule(),
 	}
 
 	var messagingStops []func()

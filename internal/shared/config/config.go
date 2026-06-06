@@ -15,6 +15,7 @@ type Config struct {
 	Database DatabaseConfig
 	JWT      JWTConfig
 	OAuth    OAuthConfig
+	MinIO    MinIOConfig
 }
 
 type AppConfig struct {
@@ -81,6 +82,20 @@ type OAuthProviderConfig struct {
 	ClientSecret string
 }
 
+type MinIOConfig struct {
+	Endpoint              string
+	Port                  int
+	UseSSL                bool
+	AccessKey             string
+	SecretKey             string
+	PublicURL             string
+	PresignEndpoint       string
+	BucketName            string
+	PresignExpiry         time.Duration
+	TempCleanupInterval   time.Duration
+	TempMaxAge            time.Duration
+}
+
 func Load() (*Config, error) {
 	v := viper.New()
 
@@ -126,6 +141,24 @@ func Load() (*Config, error) {
 	cfg.OAuth.StateExpiry = oauthStateExpiry
 	normalizeAllowedRedirectURIs(v, &cfg.OAuth)
 	normalizeCORSLists(v, &cfg.HTTP.CORS)
+
+	presignExpiry, err := parseFlexibleDuration(v.GetString("minio.presignexpiry"))
+	if err != nil {
+		return nil, fmt.Errorf("minio.presignexpiry: %w", err)
+	}
+	cfg.MinIO.PresignExpiry = presignExpiry
+
+	tempCleanupInterval, err := parseFlexibleDuration(v.GetString("minio.tempcleanupinterval"))
+	if err != nil {
+		return nil, fmt.Errorf("minio.tempcleanupinterval: %w", err)
+	}
+	cfg.MinIO.TempCleanupInterval = tempCleanupInterval
+
+	tempMaxAge, err := parseFlexibleDuration(v.GetString("minio.tempmaxage"))
+	if err != nil {
+		return nil, fmt.Errorf("minio.tempmaxage: %w", err)
+	}
+	cfg.MinIO.TempMaxAge = tempMaxAge
 
 	if err := cfg.validate(); err != nil {
 		return nil, fmt.Errorf("config validation failed: %w", err)
@@ -174,6 +207,18 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("oauth.google.clientsecret", "")
 	v.SetDefault("oauth.github.clientid", "")
 	v.SetDefault("oauth.github.clientsecret", "")
+
+	v.SetDefault("minio.endpoint", "localhost")
+	v.SetDefault("minio.port", 9000)
+	v.SetDefault("minio.usessl", false)
+	v.SetDefault("minio.accesskey", "minioadmin")
+	v.SetDefault("minio.secretkey", "minioadmin")
+	v.SetDefault("minio.publicurl", "http://localhost:9000")
+	v.SetDefault("minio.presignendpoint", "")
+	v.SetDefault("minio.bucketname", "radius")
+	v.SetDefault("minio.presignexpiry", "15m")
+	v.SetDefault("minio.tempcleanupinterval", "1h")
+	v.SetDefault("minio.tempmaxage", "24h")
 }
 
 func (c *Config) validate() error {

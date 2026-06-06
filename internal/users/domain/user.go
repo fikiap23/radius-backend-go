@@ -17,10 +17,11 @@ type User struct {
 }
 
 type ProfileUpdate struct {
-	Name      *string
-	AvatarURL *string
-	Timezone  *string
-	Locale    *string
+	Name          *string
+	AvatarURL     *string
+	AvatarTempKey *string
+	Timezone      *string
+	Locale        *string
 }
 
 type OAuthProvider string

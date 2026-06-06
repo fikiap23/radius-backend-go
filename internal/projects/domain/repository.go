@@ -13,13 +13,14 @@ type ProjectQuery struct {
 }
 
 type ProjectUpdateData struct {
-	Name          *string
-	Description   *string
-	Icon          *string
-	Cover         *ProjectCover
-	CoverImageURL *string
-	Status        *ProjectStatus
-	IsFavorite    *bool
+	Name               *string
+	Description        *string
+	Icon               *string
+	Cover              *ProjectCover
+	CoverImageURL      *string
+	CoverImageTempKey  *string
+	Status             *ProjectStatus
+	IsFavorite         *bool
 }
 
 type ProjectRepository interface {

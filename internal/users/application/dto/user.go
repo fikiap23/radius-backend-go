@@ -49,18 +49,20 @@ func MapUserProfile(u *domain.User) UserProfile {
 
 type UpdateMeInput struct {
 	Body struct {
-		Name      *string `json:"name,omitempty" doc:"Display name" minLength:"2" maxLength:"255"`
-		AvatarURL *string `json:"avatarUrl,omitempty" doc:"Avatar URL" format:"uri"`
-		Timezone  *string `json:"timezone,omitempty" doc:"IANA timezone" maxLength:"64"`
-		Locale    *string `json:"locale,omitempty" doc:"Locale code" minLength:"2" maxLength:"10"`
+		Name          *string `json:"name,omitempty" doc:"Display name" minLength:"2" maxLength:"255"`
+		AvatarURL     *string `json:"avatarUrl,omitempty" doc:"Avatar URL (direct URL; prefer avatarTempKey from presign flow)" format:"uri"`
+		AvatarTempKey *string `json:"avatarTempKey,omitempty" doc:"Temp object key from POST /storage/presign-upload (purpose=avatar)" maxLength:"512"`
+		Timezone      *string `json:"timezone,omitempty" doc:"IANA timezone" maxLength:"64"`
+		Locale        *string `json:"locale,omitempty" doc:"Locale code" minLength:"2" maxLength:"10"`
 	}
 }
 
 func (in *UpdateMeInput) ToDomain() domain.ProfileUpdate {
 	return domain.ProfileUpdate{
-		Name:      in.Body.Name,
-		AvatarURL: in.Body.AvatarURL,
-		Timezone:  in.Body.Timezone,
-		Locale:    in.Body.Locale,
+		Name:          in.Body.Name,
+		AvatarURL:     in.Body.AvatarURL,
+		AvatarTempKey: in.Body.AvatarTempKey,
+		Timezone:      in.Body.Timezone,
+		Locale:        in.Body.Locale,
 	}
 }

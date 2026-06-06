@@ -7,6 +7,7 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/radius/radius-backend/internal/shared/humaapi"
 	"github.com/radius/radius-backend/internal/shared/middleware"
+	storagedomain "github.com/radius/radius-backend/internal/storage/domain"
 	"github.com/radius/radius-backend/internal/users/application/dto"
 	"github.com/radius/radius-backend/internal/users/application/services"
 	"github.com/radius/radius-backend/internal/users/domain"
@@ -15,6 +16,8 @@ import (
 
 var userErrors = []humaapi.ErrorMapping{
 	{Err: domain.ErrUserNotFound, Status: http.StatusNotFound, Code: "user_not_found", Message: "User not found.", Param: "id"},
+	{Err: storagedomain.ErrTempFileNotFound, Status: http.StatusBadRequest, Code: "temp_file_not_found", Message: "Uploaded temp file not found.", Param: "avatarTempKey"},
+	{Err: storagedomain.ErrInvalidTempKey, Status: http.StatusBadRequest, Code: "invalid_temp_key", Message: "Invalid temp key.", Param: "avatarTempKey"},
 }
 
 func RegisterUsers(api huma.API, svc *services.UserService, auth *middleware.AuthMiddleware, logger *zap.Logger) {

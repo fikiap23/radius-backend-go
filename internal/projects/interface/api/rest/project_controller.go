@@ -10,6 +10,7 @@ import (
 	"github.com/radius/radius-backend/internal/projects/domain"
 	"github.com/radius/radius-backend/internal/shared/humaapi"
 	"github.com/radius/radius-backend/internal/shared/middleware"
+	storagedomain "github.com/radius/radius-backend/internal/storage/domain"
 	"go.uber.org/zap"
 )
 
@@ -18,6 +19,8 @@ var projectErrors = []humaapi.ErrorMapping{
 	{Err: domain.ErrProjectForbidden, Status: http.StatusForbidden, Code: "project_forbidden", Message: "You do not have permission to perform this action."},
 	{Err: domain.ErrProjectArchived, Status: http.StatusConflict, Code: "project_already_archived", Message: "Project is already archived."},
 	{Err: domain.ErrProjectNotArchived, Status: http.StatusConflict, Code: "project_not_archived", Message: "Project is not archived."},
+	{Err: storagedomain.ErrTempFileNotFound, Status: http.StatusBadRequest, Code: "temp_file_not_found", Message: "Uploaded temp file not found.", Param: "coverImageTempKey"},
+	{Err: storagedomain.ErrInvalidTempKey, Status: http.StatusBadRequest, Code: "invalid_temp_key", Message: "Invalid temp key.", Param: "coverImageTempKey"},
 }
 
 func RegisterProjects(api huma.API, svc *services.ProjectService, auth *middleware.AuthMiddleware, logger *zap.Logger) {

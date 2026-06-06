@@ -53,7 +53,7 @@ func (m *Module) wire(deps module.Dependencies) {
 		deps.Config.JWT,
 		deps.Logger,
 	)
-	m.userSvc = services.NewUserService(userRepo, deps.Logger)
+	m.userSvc = services.NewUserService(userRepo, deps.ObjectStorage, deps.Logger)
 }
 
 func (m *Module) RegisterHTTP(e *echo.Echo, api huma.API, deps module.Dependencies, auth *middleware.AuthMiddleware) {
