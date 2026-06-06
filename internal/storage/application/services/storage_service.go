@@ -21,7 +21,7 @@ func NewStorageService(storage domain.ObjectStorage, logger *zap.Logger) *Storag
 }
 
 func (s *StorageService) HandlePresignUpload(ctx context.Context, in dto.PresignUploadInput) (*dto.PresignUploadOutput, error) {
-	if err := validateUploadPurpose(in.FileName, in.ContentType, in.Purpose); err != nil {
+	if err := validateUploadPurpose(in.Body.FileName, in.Body.ContentType, in.Body.Purpose); err != nil {
 		return nil, err
 	}
 
@@ -29,7 +29,7 @@ func (s *StorageService) HandlePresignUpload(ctx context.Context, in dto.Presign
 		return nil, fmt.Errorf("ensure bucket: %w", err)
 	}
 
-	result, err := s.storage.CreatePresignedUploadURL(ctx, in.FileName)
+	result, err := s.storage.CreatePresignedUploadURL(ctx, in.Body.FileName)
 	if err != nil {
 		return nil, fmt.Errorf("presign upload: %w", err)
 	}
