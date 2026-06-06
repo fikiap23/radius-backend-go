@@ -19,6 +19,7 @@ import (
 	"github.com/radius/radius-backend/internal/shared/httplog"
 	"github.com/radius/radius-backend/internal/shared/humaapi"
 	"github.com/radius/radius-backend/internal/shared/middleware"
+	"github.com/radius/radius-backend/internal/projects"
 	"github.com/radius/radius-backend/internal/users"
 	"github.com/radius/radius-backend/internal/workspaces"
 	"go.uber.org/zap"
@@ -72,6 +73,7 @@ func Run() error {
 	contexts := []module.BoundedContext{
 		users.NewModule(),
 		workspaces.NewModule(),
+		projects.NewModule(),
 	}
 
 	var messagingStops []func()
