@@ -13,6 +13,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/radius/radius-backend/ent/predicate"
+	"github.com/radius/radius-backend/ent/project"
 	"github.com/radius/radius-backend/ent/workspace"
 	"github.com/radius/radius-backend/ent/workspacemember"
 )
@@ -20,11 +21,12 @@ import (
 // WorkspaceQuery is the builder for querying Workspace entities.
 type WorkspaceQuery struct {
 	config
-	ctx         *QueryContext
-	order       []workspace.OrderOption
-	inters      []Interceptor
-	predicates  []predicate.Workspace
-	withMembers *WorkspaceMemberQuery
+	ctx          *QueryContext
+	order        []workspace.OrderOption
+	inters       []Interceptor
+	predicates   []predicate.Workspace
+	withMembers  *WorkspaceMemberQuery
+	withProjects *ProjectQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -76,6 +78,28 @@ func (wq *WorkspaceQuery) QueryMembers() *WorkspaceMemberQuery {
 			sqlgraph.From(workspace.Table, workspace.FieldID, selector),
 			sqlgraph.To(workspacemember.Table, workspacemember.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, workspace.MembersTable, workspace.MembersColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(wq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryProjects chains the current query on the "projects" edge.
+func (wq *WorkspaceQuery) QueryProjects() *ProjectQuery {
+	query := (&ProjectClient{config: wq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := wq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := wq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(workspace.Table, workspace.FieldID, selector),
+			sqlgraph.To(project.Table, project.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, workspace.ProjectsTable, workspace.ProjectsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(wq.driver.Dialect(), step)
 		return fromU, nil
@@ -270,12 +294,13 @@ func (wq *WorkspaceQuery) Clone() *WorkspaceQuery {
 		return nil
 	}
 	return &WorkspaceQuery{
-		config:      wq.config,
-		ctx:         wq.ctx.Clone(),
-		order:       append([]workspace.OrderOption{}, wq.order...),
-		inters:      append([]Interceptor{}, wq.inters...),
-		predicates:  append([]predicate.Workspace{}, wq.predicates...),
-		withMembers: wq.withMembers.Clone(),
+		config:       wq.config,
+		ctx:          wq.ctx.Clone(),
+		order:        append([]workspace.OrderOption{}, wq.order...),
+		inters:       append([]Interceptor{}, wq.inters...),
+		predicates:   append([]predicate.Workspace{}, wq.predicates...),
+		withMembers:  wq.withMembers.Clone(),
+		withProjects: wq.withProjects.Clone(),
 		// clone intermediate query.
 		sql:  wq.sql.Clone(),
 		path: wq.path,
@@ -290,6 +315,17 @@ func (wq *WorkspaceQuery) WithMembers(opts ...func(*WorkspaceMemberQuery)) *Work
 		opt(query)
 	}
 	wq.withMembers = query
+	return wq
+}
+
+// WithProjects tells the query-builder to eager-load the nodes that are connected to
+// the "projects" edge. The optional arguments are used to configure the query builder of the edge.
+func (wq *WorkspaceQuery) WithProjects(opts ...func(*ProjectQuery)) *WorkspaceQuery {
+	query := (&ProjectClient{config: wq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	wq.withProjects = query
 	return wq
 }
 
@@ -371,8 +407,9 @@ func (wq *WorkspaceQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Wo
 	var (
 		nodes       = []*Workspace{}
 		_spec       = wq.querySpec()
-		loadedTypes = [1]bool{
+		loadedTypes = [2]bool{
 			wq.withMembers != nil,
+			wq.withProjects != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -400,6 +437,13 @@ func (wq *WorkspaceQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Wo
 			return nil, err
 		}
 	}
+	if query := wq.withProjects; query != nil {
+		if err := wq.loadProjects(ctx, query, nodes,
+			func(n *Workspace) { n.Edges.Projects = []*Project{} },
+			func(n *Workspace, e *Project) { n.Edges.Projects = append(n.Edges.Projects, e) }); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
 }
 
@@ -418,6 +462,36 @@ func (wq *WorkspaceQuery) loadMembers(ctx context.Context, query *WorkspaceMembe
 	}
 	query.Where(predicate.WorkspaceMember(func(s *sql.Selector) {
 		s.Where(sql.InValues(s.C(workspace.MembersColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.WorkspaceID
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "workspace_id" returned %v for node %v`, fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (wq *WorkspaceQuery) loadProjects(ctx context.Context, query *ProjectQuery, nodes []*Workspace, init func(*Workspace), assign func(*Workspace, *Project)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[string]*Workspace)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(project.FieldWorkspaceID)
+	}
+	query.Where(predicate.Project(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(workspace.ProjectsColumn), fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {

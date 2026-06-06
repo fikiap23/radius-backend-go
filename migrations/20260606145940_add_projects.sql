@@ -1,0 +1,4 @@
+-- Create "projects" table
+CREATE TABLE "projects" ("id" uuid NOT NULL, "name" character varying NOT NULL, "description" text NULL, "icon" character varying NOT NULL DEFAULT '🚀', "cover" character varying NOT NULL DEFAULT 'emerald', "cover_image_url" text NULL, "status" character varying NOT NULL DEFAULT 'active', "is_favorite" boolean NOT NULL DEFAULT false, "archived_at" timestamptz NULL, "open_tasks" bigint NOT NULL DEFAULT 0, "progress" bigint NOT NULL DEFAULT 0, "created_at" timestamptz NOT NULL, "updated_at" timestamptz NOT NULL, "workspace_id" uuid NOT NULL, PRIMARY KEY ("id"), CONSTRAINT "projects_workspaces_projects" FOREIGN KEY ("workspace_id") REFERENCES "workspaces" ("id") ON UPDATE NO ACTION ON DELETE CASCADE, CONSTRAINT "projects_progress_range" CHECK ((progress >= 0) AND (progress <= 100)));
+-- Create index "project_workspace_id" to table: "projects"
+CREATE INDEX "project_workspace_id" ON "projects" ("workspace_id");

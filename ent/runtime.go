@@ -5,6 +5,7 @@ package ent
 import (
 	"time"
 
+	"github.com/radius/radius-backend/ent/project"
 	"github.com/radius/radius-backend/ent/schema"
 	"github.com/radius/radius-backend/ent/user"
 	"github.com/radius/radius-backend/ent/useroauthaccount"
@@ -16,6 +17,62 @@ import (
 // (default values, validators, hooks and policies) and stitches it
 // to their package variables.
 func init() {
+	projectFields := schema.Project{}.Fields()
+	_ = projectFields
+	// projectDescName is the schema descriptor for name field.
+	projectDescName := projectFields[2].Descriptor()
+	// project.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	project.NameValidator = projectDescName.Validators[0].(func(string) error)
+	// projectDescIcon is the schema descriptor for icon field.
+	projectDescIcon := projectFields[4].Descriptor()
+	// project.DefaultIcon holds the default value on creation for the icon field.
+	project.DefaultIcon = projectDescIcon.Default.(string)
+	// project.IconValidator is a validator for the "icon" field. It is called by the builders before save.
+	project.IconValidator = projectDescIcon.Validators[0].(func(string) error)
+	// projectDescIsFavorite is the schema descriptor for is_favorite field.
+	projectDescIsFavorite := projectFields[8].Descriptor()
+	// project.DefaultIsFavorite holds the default value on creation for the is_favorite field.
+	project.DefaultIsFavorite = projectDescIsFavorite.Default.(bool)
+	// projectDescOpenTasks is the schema descriptor for open_tasks field.
+	projectDescOpenTasks := projectFields[10].Descriptor()
+	// project.DefaultOpenTasks holds the default value on creation for the open_tasks field.
+	project.DefaultOpenTasks = projectDescOpenTasks.Default.(int)
+	// project.OpenTasksValidator is a validator for the "open_tasks" field. It is called by the builders before save.
+	project.OpenTasksValidator = projectDescOpenTasks.Validators[0].(func(int) error)
+	// projectDescProgress is the schema descriptor for progress field.
+	projectDescProgress := projectFields[11].Descriptor()
+	// project.DefaultProgress holds the default value on creation for the progress field.
+	project.DefaultProgress = projectDescProgress.Default.(int)
+	// project.ProgressValidator is a validator for the "progress" field. It is called by the builders before save.
+	project.ProgressValidator = func() func(int) error {
+		validators := projectDescProgress.Validators
+		fns := [...]func(int) error{
+			validators[0].(func(int) error),
+			validators[1].(func(int) error),
+		}
+		return func(progress int) error {
+			for _, fn := range fns {
+				if err := fn(progress); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// projectDescCreatedAt is the schema descriptor for created_at field.
+	projectDescCreatedAt := projectFields[12].Descriptor()
+	// project.DefaultCreatedAt holds the default value on creation for the created_at field.
+	project.DefaultCreatedAt = projectDescCreatedAt.Default.(func() time.Time)
+	// projectDescUpdatedAt is the schema descriptor for updated_at field.
+	projectDescUpdatedAt := projectFields[13].Descriptor()
+	// project.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	project.DefaultUpdatedAt = projectDescUpdatedAt.Default.(func() time.Time)
+	// project.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	project.UpdateDefaultUpdatedAt = projectDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// projectDescID is the schema descriptor for id field.
+	projectDescID := projectFields[0].Descriptor()
+	// project.DefaultID holds the default value on creation for the id field.
+	project.DefaultID = projectDescID.Default.(string)
 	userFields := schema.User{}.Fields()
 	_ = userFields
 	// userDescName is the schema descriptor for name field.

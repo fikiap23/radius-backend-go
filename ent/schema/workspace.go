@@ -46,5 +46,7 @@ func (Workspace) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.To("members", WorkspaceMember.Type).
 			Annotations(entsql.OnDelete(entsql.Cascade)),
+		edge.To("projects", Project.Type).
+			Annotations(entsql.OnDelete(entsql.Cascade)),
 	}
 }

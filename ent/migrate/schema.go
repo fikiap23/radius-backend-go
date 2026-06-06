@@ -9,6 +9,44 @@ import (
 )
 
 var (
+	// ProjectsColumns holds the columns for the "projects" table.
+	ProjectsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, SchemaType: map[string]string{"postgres": "uuid"}},
+		{Name: "name", Type: field.TypeString},
+		{Name: "description", Type: field.TypeString, Nullable: true, SchemaType: map[string]string{"postgres": "text"}},
+		{Name: "icon", Type: field.TypeString, Default: "🚀"},
+		{Name: "cover", Type: field.TypeEnum, Enums: []string{"emerald", "ocean", "sunset", "violet", "rose", "slate"}, Default: "emerald"},
+		{Name: "cover_image_url", Type: field.TypeString, Nullable: true, SchemaType: map[string]string{"postgres": "text"}},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"active", "on_hold", "completed"}, Default: "active"},
+		{Name: "is_favorite", Type: field.TypeBool, Default: false},
+		{Name: "archived_at", Type: field.TypeTime, Nullable: true},
+		{Name: "open_tasks", Type: field.TypeInt, Default: 0},
+		{Name: "progress", Type: field.TypeInt, Default: 0},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "workspace_id", Type: field.TypeString, SchemaType: map[string]string{"postgres": "uuid"}},
+	}
+	// ProjectsTable holds the schema information for the "projects" table.
+	ProjectsTable = &schema.Table{
+		Name:       "projects",
+		Columns:    ProjectsColumns,
+		PrimaryKey: []*schema.Column{ProjectsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "projects_workspaces_projects",
+				Columns:    []*schema.Column{ProjectsColumns[13]},
+				RefColumns: []*schema.Column{WorkspacesColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "project_workspace_id",
+				Unique:  false,
+				Columns: []*schema.Column{ProjectsColumns[13]},
+			},
+		},
+	}
 	// UsersColumns holds the columns for the "users" table.
 	UsersColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeString, SchemaType: map[string]string{"postgres": "uuid"}},
@@ -137,6 +175,7 @@ var (
 	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
+		ProjectsTable,
 		UsersTable,
 		UserOauthAccountsTable,
 		WorkspacesTable,
@@ -145,6 +184,13 @@ var (
 )
 
 func init() {
+	ProjectsTable.ForeignKeys[0].RefTable = WorkspacesTable
+	ProjectsTable.Annotation = &entsql.Annotation{
+		Table: "projects",
+	}
+	ProjectsTable.Annotation.Checks = map[string]string{
+		"projects_progress_range": "progress >= 0 AND progress <= 100",
+	}
 	UsersTable.Annotation = &entsql.Annotation{
 		Table: "users",
 	}
