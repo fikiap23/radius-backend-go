@@ -77,6 +77,10 @@ func (User) Edges() []ent.Edge {
 			Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.To("workspace_members", WorkspaceMember.Type).
 			Annotations(entsql.OnDelete(entsql.Cascade)),
+		edge.To("assigned_tasks", Task.Type).
+			Annotations(entsql.OnDelete(entsql.SetNull)),
+		edge.To("task_comments", TaskComment.Type).
+			Annotations(entsql.OnDelete(entsql.SetNull)),
 	}
 }
 

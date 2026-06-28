@@ -13,6 +13,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/radius/radius-backend/ent/boardcolumn"
 	"github.com/radius/radius-backend/ent/predicate"
+	"github.com/radius/radius-backend/ent/task"
 )
 
 // BoardColumnUpdate is the builder for updating BoardColumn entities.
@@ -110,9 +111,45 @@ func (bcu *BoardColumnUpdate) SetUpdatedAt(t time.Time) *BoardColumnUpdate {
 	return bcu
 }
 
+// AddTaskIDs adds the "tasks" edge to the Task entity by IDs.
+func (bcu *BoardColumnUpdate) AddTaskIDs(ids ...string) *BoardColumnUpdate {
+	bcu.mutation.AddTaskIDs(ids...)
+	return bcu
+}
+
+// AddTasks adds the "tasks" edges to the Task entity.
+func (bcu *BoardColumnUpdate) AddTasks(t ...*Task) *BoardColumnUpdate {
+	ids := make([]string, len(t))
+	for i := range t {
+		ids[i] = t[i].ID
+	}
+	return bcu.AddTaskIDs(ids...)
+}
+
 // Mutation returns the BoardColumnMutation object of the builder.
 func (bcu *BoardColumnUpdate) Mutation() *BoardColumnMutation {
 	return bcu.mutation
+}
+
+// ClearTasks clears all "tasks" edges to the Task entity.
+func (bcu *BoardColumnUpdate) ClearTasks() *BoardColumnUpdate {
+	bcu.mutation.ClearTasks()
+	return bcu
+}
+
+// RemoveTaskIDs removes the "tasks" edge to Task entities by IDs.
+func (bcu *BoardColumnUpdate) RemoveTaskIDs(ids ...string) *BoardColumnUpdate {
+	bcu.mutation.RemoveTaskIDs(ids...)
+	return bcu
+}
+
+// RemoveTasks removes "tasks" edges to Task entities.
+func (bcu *BoardColumnUpdate) RemoveTasks(t ...*Task) *BoardColumnUpdate {
+	ids := make([]string, len(t))
+	for i := range t {
+		ids[i] = t[i].ID
+	}
+	return bcu.RemoveTaskIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -214,6 +251,51 @@ func (bcu *BoardColumnUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if value, ok := bcu.mutation.UpdatedAt(); ok {
 		_spec.SetField(boardcolumn.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if bcu.mutation.TasksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   boardcolumn.TasksTable,
+			Columns: []string{boardcolumn.TasksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(task.FieldID, field.TypeString),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := bcu.mutation.RemovedTasksIDs(); len(nodes) > 0 && !bcu.mutation.TasksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   boardcolumn.TasksTable,
+			Columns: []string{boardcolumn.TasksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(task.FieldID, field.TypeString),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := bcu.mutation.TasksIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   boardcolumn.TasksTable,
+			Columns: []string{boardcolumn.TasksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(task.FieldID, field.TypeString),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if n, err = sqlgraph.UpdateNodes(ctx, bcu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -317,9 +399,45 @@ func (bcuo *BoardColumnUpdateOne) SetUpdatedAt(t time.Time) *BoardColumnUpdateOn
 	return bcuo
 }
 
+// AddTaskIDs adds the "tasks" edge to the Task entity by IDs.
+func (bcuo *BoardColumnUpdateOne) AddTaskIDs(ids ...string) *BoardColumnUpdateOne {
+	bcuo.mutation.AddTaskIDs(ids...)
+	return bcuo
+}
+
+// AddTasks adds the "tasks" edges to the Task entity.
+func (bcuo *BoardColumnUpdateOne) AddTasks(t ...*Task) *BoardColumnUpdateOne {
+	ids := make([]string, len(t))
+	for i := range t {
+		ids[i] = t[i].ID
+	}
+	return bcuo.AddTaskIDs(ids...)
+}
+
 // Mutation returns the BoardColumnMutation object of the builder.
 func (bcuo *BoardColumnUpdateOne) Mutation() *BoardColumnMutation {
 	return bcuo.mutation
+}
+
+// ClearTasks clears all "tasks" edges to the Task entity.
+func (bcuo *BoardColumnUpdateOne) ClearTasks() *BoardColumnUpdateOne {
+	bcuo.mutation.ClearTasks()
+	return bcuo
+}
+
+// RemoveTaskIDs removes the "tasks" edge to Task entities by IDs.
+func (bcuo *BoardColumnUpdateOne) RemoveTaskIDs(ids ...string) *BoardColumnUpdateOne {
+	bcuo.mutation.RemoveTaskIDs(ids...)
+	return bcuo
+}
+
+// RemoveTasks removes "tasks" edges to Task entities.
+func (bcuo *BoardColumnUpdateOne) RemoveTasks(t ...*Task) *BoardColumnUpdateOne {
+	ids := make([]string, len(t))
+	for i := range t {
+		ids[i] = t[i].ID
+	}
+	return bcuo.RemoveTaskIDs(ids...)
 }
 
 // Where appends a list predicates to the BoardColumnUpdate builder.
@@ -451,6 +569,51 @@ func (bcuo *BoardColumnUpdateOne) sqlSave(ctx context.Context) (_node *BoardColu
 	}
 	if value, ok := bcuo.mutation.UpdatedAt(); ok {
 		_spec.SetField(boardcolumn.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if bcuo.mutation.TasksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   boardcolumn.TasksTable,
+			Columns: []string{boardcolumn.TasksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(task.FieldID, field.TypeString),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := bcuo.mutation.RemovedTasksIDs(); len(nodes) > 0 && !bcuo.mutation.TasksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   boardcolumn.TasksTable,
+			Columns: []string{boardcolumn.TasksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(task.FieldID, field.TypeString),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := bcuo.mutation.TasksIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   boardcolumn.TasksTable,
+			Columns: []string{boardcolumn.TasksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(task.FieldID, field.TypeString),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &BoardColumn{config: bcuo.config}
 	_spec.Assign = _node.assignValues

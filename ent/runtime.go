@@ -8,6 +8,12 @@ import (
 	"github.com/radius/radius-backend/ent/boardcolumn"
 	"github.com/radius/radius-backend/ent/project"
 	"github.com/radius/radius-backend/ent/schema"
+	"github.com/radius/radius-backend/ent/task"
+	"github.com/radius/radius-backend/ent/taskactivitylog"
+	"github.com/radius/radius-backend/ent/taskattachment"
+	"github.com/radius/radius-backend/ent/taskchecklistitem"
+	"github.com/radius/radius-backend/ent/taskcomment"
+	"github.com/radius/radius-backend/ent/tasksubtask"
 	"github.com/radius/radius-backend/ent/user"
 	"github.com/radius/radius-backend/ent/useroauthaccount"
 	"github.com/radius/radius-backend/ent/workspace"
@@ -108,6 +114,134 @@ func init() {
 	projectDescID := projectFields[0].Descriptor()
 	// project.DefaultID holds the default value on creation for the id field.
 	project.DefaultID = projectDescID.Default.(string)
+	taskFields := schema.Task{}.Fields()
+	_ = taskFields
+	// taskDescTitle is the schema descriptor for title field.
+	taskDescTitle := taskFields[3].Descriptor()
+	// task.TitleValidator is a validator for the "title" field. It is called by the builders before save.
+	task.TitleValidator = taskDescTitle.Validators[0].(func(string) error)
+	// taskDescLabelIds is the schema descriptor for label_ids field.
+	taskDescLabelIds := taskFields[9].Descriptor()
+	// task.DefaultLabelIds holds the default value on creation for the label_ids field.
+	task.DefaultLabelIds = taskDescLabelIds.Default.([]string)
+	// taskDescCreatedAt is the schema descriptor for created_at field.
+	taskDescCreatedAt := taskFields[11].Descriptor()
+	// task.DefaultCreatedAt holds the default value on creation for the created_at field.
+	task.DefaultCreatedAt = taskDescCreatedAt.Default.(func() time.Time)
+	// taskDescUpdatedAt is the schema descriptor for updated_at field.
+	taskDescUpdatedAt := taskFields[12].Descriptor()
+	// task.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	task.DefaultUpdatedAt = taskDescUpdatedAt.Default.(func() time.Time)
+	// task.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	task.UpdateDefaultUpdatedAt = taskDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// taskDescID is the schema descriptor for id field.
+	taskDescID := taskFields[0].Descriptor()
+	// task.DefaultID holds the default value on creation for the id field.
+	task.DefaultID = taskDescID.Default.(string)
+	taskactivitylogFields := schema.TaskActivityLog{}.Fields()
+	_ = taskactivitylogFields
+	// taskactivitylogDescTitle is the schema descriptor for title field.
+	taskactivitylogDescTitle := taskactivitylogFields[2].Descriptor()
+	// taskactivitylog.TitleValidator is a validator for the "title" field. It is called by the builders before save.
+	taskactivitylog.TitleValidator = taskactivitylogDescTitle.Validators[0].(func(string) error)
+	// taskactivitylogDescIcon is the schema descriptor for icon field.
+	taskactivitylogDescIcon := taskactivitylogFields[4].Descriptor()
+	// taskactivitylog.IconValidator is a validator for the "icon" field. It is called by the builders before save.
+	taskactivitylog.IconValidator = taskactivitylogDescIcon.Validators[0].(func(string) error)
+	// taskactivitylogDescOccurredAt is the schema descriptor for occurred_at field.
+	taskactivitylogDescOccurredAt := taskactivitylogFields[5].Descriptor()
+	// taskactivitylog.DefaultOccurredAt holds the default value on creation for the occurred_at field.
+	taskactivitylog.DefaultOccurredAt = taskactivitylogDescOccurredAt.Default.(func() time.Time)
+	// taskactivitylogDescID is the schema descriptor for id field.
+	taskactivitylogDescID := taskactivitylogFields[0].Descriptor()
+	// taskactivitylog.DefaultID holds the default value on creation for the id field.
+	taskactivitylog.DefaultID = taskactivitylogDescID.Default.(string)
+	taskattachmentFields := schema.TaskAttachment{}.Fields()
+	_ = taskattachmentFields
+	// taskattachmentDescName is the schema descriptor for name field.
+	taskattachmentDescName := taskattachmentFields[2].Descriptor()
+	// taskattachment.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	taskattachment.NameValidator = taskattachmentDescName.Validators[0].(func(string) error)
+	// taskattachmentDescSize is the schema descriptor for size field.
+	taskattachmentDescSize := taskattachmentFields[3].Descriptor()
+	// taskattachment.SizeValidator is a validator for the "size" field. It is called by the builders before save.
+	taskattachment.SizeValidator = taskattachmentDescSize.Validators[0].(func(int64) error)
+	// taskattachmentDescMimeType is the schema descriptor for mime_type field.
+	taskattachmentDescMimeType := taskattachmentFields[4].Descriptor()
+	// taskattachment.MimeTypeValidator is a validator for the "mime_type" field. It is called by the builders before save.
+	taskattachment.MimeTypeValidator = taskattachmentDescMimeType.Validators[0].(func(string) error)
+	// taskattachmentDescStorageKey is the schema descriptor for storage_key field.
+	taskattachmentDescStorageKey := taskattachmentFields[5].Descriptor()
+	// taskattachment.StorageKeyValidator is a validator for the "storage_key" field. It is called by the builders before save.
+	taskattachment.StorageKeyValidator = taskattachmentDescStorageKey.Validators[0].(func(string) error)
+	// taskattachmentDescURL is the schema descriptor for url field.
+	taskattachmentDescURL := taskattachmentFields[6].Descriptor()
+	// taskattachment.URLValidator is a validator for the "url" field. It is called by the builders before save.
+	taskattachment.URLValidator = taskattachmentDescURL.Validators[0].(func(string) error)
+	// taskattachmentDescUploadedAt is the schema descriptor for uploaded_at field.
+	taskattachmentDescUploadedAt := taskattachmentFields[7].Descriptor()
+	// taskattachment.DefaultUploadedAt holds the default value on creation for the uploaded_at field.
+	taskattachment.DefaultUploadedAt = taskattachmentDescUploadedAt.Default.(func() time.Time)
+	// taskattachmentDescID is the schema descriptor for id field.
+	taskattachmentDescID := taskattachmentFields[0].Descriptor()
+	// taskattachment.DefaultID holds the default value on creation for the id field.
+	taskattachment.DefaultID = taskattachmentDescID.Default.(string)
+	taskchecklistitemFields := schema.TaskChecklistItem{}.Fields()
+	_ = taskchecklistitemFields
+	// taskchecklistitemDescText is the schema descriptor for text field.
+	taskchecklistitemDescText := taskchecklistitemFields[2].Descriptor()
+	// taskchecklistitem.TextValidator is a validator for the "text" field. It is called by the builders before save.
+	taskchecklistitem.TextValidator = taskchecklistitemDescText.Validators[0].(func(string) error)
+	// taskchecklistitemDescChecked is the schema descriptor for checked field.
+	taskchecklistitemDescChecked := taskchecklistitemFields[3].Descriptor()
+	// taskchecklistitem.DefaultChecked holds the default value on creation for the checked field.
+	taskchecklistitem.DefaultChecked = taskchecklistitemDescChecked.Default.(bool)
+	// taskchecklistitemDescID is the schema descriptor for id field.
+	taskchecklistitemDescID := taskchecklistitemFields[0].Descriptor()
+	// taskchecklistitem.DefaultID holds the default value on creation for the id field.
+	taskchecklistitem.DefaultID = taskchecklistitemDescID.Default.(string)
+	taskcommentFields := schema.TaskComment{}.Fields()
+	_ = taskcommentFields
+	// taskcommentDescAuthorName is the schema descriptor for author_name field.
+	taskcommentDescAuthorName := taskcommentFields[3].Descriptor()
+	// taskcomment.AuthorNameValidator is a validator for the "author_name" field. It is called by the builders before save.
+	taskcomment.AuthorNameValidator = taskcommentDescAuthorName.Validators[0].(func(string) error)
+	// taskcommentDescBody is the schema descriptor for body field.
+	taskcommentDescBody := taskcommentFields[4].Descriptor()
+	// taskcomment.BodyValidator is a validator for the "body" field. It is called by the builders before save.
+	taskcomment.BodyValidator = taskcommentDescBody.Validators[0].(func(string) error)
+	// taskcommentDescMentionIds is the schema descriptor for mention_ids field.
+	taskcommentDescMentionIds := taskcommentFields[5].Descriptor()
+	// taskcomment.DefaultMentionIds holds the default value on creation for the mention_ids field.
+	taskcomment.DefaultMentionIds = taskcommentDescMentionIds.Default.([]string)
+	// taskcommentDescCreatedAt is the schema descriptor for created_at field.
+	taskcommentDescCreatedAt := taskcommentFields[6].Descriptor()
+	// taskcomment.DefaultCreatedAt holds the default value on creation for the created_at field.
+	taskcomment.DefaultCreatedAt = taskcommentDescCreatedAt.Default.(func() time.Time)
+	// taskcommentDescUpdatedAt is the schema descriptor for updated_at field.
+	taskcommentDescUpdatedAt := taskcommentFields[7].Descriptor()
+	// taskcomment.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	taskcomment.DefaultUpdatedAt = taskcommentDescUpdatedAt.Default.(func() time.Time)
+	// taskcomment.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	taskcomment.UpdateDefaultUpdatedAt = taskcommentDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// taskcommentDescID is the schema descriptor for id field.
+	taskcommentDescID := taskcommentFields[0].Descriptor()
+	// taskcomment.DefaultID holds the default value on creation for the id field.
+	taskcomment.DefaultID = taskcommentDescID.Default.(string)
+	tasksubtaskFields := schema.TaskSubtask{}.Fields()
+	_ = tasksubtaskFields
+	// tasksubtaskDescTitle is the schema descriptor for title field.
+	tasksubtaskDescTitle := tasksubtaskFields[2].Descriptor()
+	// tasksubtask.TitleValidator is a validator for the "title" field. It is called by the builders before save.
+	tasksubtask.TitleValidator = tasksubtaskDescTitle.Validators[0].(func(string) error)
+	// tasksubtaskDescDone is the schema descriptor for done field.
+	tasksubtaskDescDone := tasksubtaskFields[3].Descriptor()
+	// tasksubtask.DefaultDone holds the default value on creation for the done field.
+	tasksubtask.DefaultDone = tasksubtaskDescDone.Default.(bool)
+	// tasksubtaskDescID is the schema descriptor for id field.
+	tasksubtaskDescID := tasksubtaskFields[0].Descriptor()
+	// tasksubtask.DefaultID holds the default value on creation for the id field.
+	tasksubtask.DefaultID = tasksubtaskDescID.Default.(string)
 	userFields := schema.User{}.Fields()
 	_ = userFields
 	// userDescName is the schema descriptor for name field.

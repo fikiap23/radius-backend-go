@@ -8,19 +8,40 @@ import (
 
 	"github.com/radius/radius-backend/internal/storage/application/dto"
 	"github.com/radius/radius-backend/internal/storage/domain"
+	taskdomain "github.com/radius/radius-backend/internal/tasks/domain"
 	"go.uber.org/zap"
 )
 
 type StorageService struct {
-	storage domain.ObjectStorage
-	logger  *zap.Logger
+	storage    domain.ObjectStorage
+	logger     *zap.Logger
+	taskAccess taskdomain.TaskAccessChecker
 }
 
-func NewStorageService(storage domain.ObjectStorage, logger *zap.Logger) *StorageService {
-	return &StorageService{storage: storage, logger: logger}
+func NewStorageService(storage domain.ObjectStorage, logger *zap.Logger, taskAccess taskdomain.TaskAccessChecker) *StorageService {
+	return &StorageService{storage: storage, logger: logger, taskAccess: taskAccess}
 }
 
-func (s *StorageService) HandlePresignUpload(ctx context.Context, in dto.PresignUploadInput) (*dto.PresignUploadOutput, error) {
+func (s *StorageService) HandlePresignUpload(ctx context.Context, userID string, in dto.PresignUploadInput) (*dto.PresignUploadOutput, error) {
+	if in.Body.Purpose == domain.UploadPurposeTaskAttachment {
+		if userID == "" {
+			return nil, domain.ErrPresignAuthRequired
+		}
+		taskID := ""
+		if in.Body.Context != nil {
+			taskID = strings.TrimSpace(in.Body.Context.TaskID)
+		}
+		if taskID == "" {
+			return nil, domain.ErrPresignTaskIDRequired
+		}
+		if s.taskAccess == nil {
+			return nil, fmt.Errorf("task access checker not configured")
+		}
+		if err := s.taskAccess.CanAccessTask(ctx, userID, taskID); err != nil {
+			return nil, err
+		}
+	}
+
 	if err := validateUploadPurpose(in.Body.FileName, in.Body.ContentType, in.Body.Purpose); err != nil {
 		return nil, err
 	}
@@ -54,7 +75,7 @@ func validateUploadPurpose(fileName, contentType string, purpose domain.UploadPu
 		".jpg": {}, ".jpeg": {}, ".png": {}, ".webp": {},
 	}
 	documentContentTypes := map[string]struct{}{
-		"application/pdf": {},
+		"application/pdf":    {},
 		"application/msword": {},
 		"application/vnd.openxmlformats-officedocument.wordprocessingml.document": {},
 		"image/jpeg": {}, "image/png": {}, "image/webp": {},
@@ -66,7 +87,7 @@ func validateUploadPurpose(fileName, contentType string, purpose domain.UploadPu
 	case domain.UploadPurposeAvatar, domain.UploadPurposeProjectCover:
 		allowedExtensions = imageExtensions
 		allowedContentTypes = imageContentTypes
-	case domain.UploadPurposeAttachment:
+	case domain.UploadPurposeAttachment, domain.UploadPurposeTaskAttachment:
 		allowedExtensions = documentExtensions
 		allowedContentTypes = documentContentTypes
 	default:

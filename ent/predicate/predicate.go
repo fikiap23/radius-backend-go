@@ -12,6 +12,24 @@ type BoardColumn func(*sql.Selector)
 // Project is the predicate function for project builders.
 type Project func(*sql.Selector)
 
+// Task is the predicate function for task builders.
+type Task func(*sql.Selector)
+
+// TaskActivityLog is the predicate function for taskactivitylog builders.
+type TaskActivityLog func(*sql.Selector)
+
+// TaskAttachment is the predicate function for taskattachment builders.
+type TaskAttachment func(*sql.Selector)
+
+// TaskChecklistItem is the predicate function for taskchecklistitem builders.
+type TaskChecklistItem func(*sql.Selector)
+
+// TaskComment is the predicate function for taskcomment builders.
+type TaskComment func(*sql.Selector)
+
+// TaskSubtask is the predicate function for tasksubtask builders.
+type TaskSubtask func(*sql.Selector)
+
 // User is the predicate function for user builders.
 type User func(*sql.Selector)
 

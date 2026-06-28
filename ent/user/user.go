@@ -40,6 +40,10 @@ const (
 	EdgeOauthAccounts = "oauth_accounts"
 	// EdgeWorkspaceMembers holds the string denoting the workspace_members edge name in mutations.
 	EdgeWorkspaceMembers = "workspace_members"
+	// EdgeAssignedTasks holds the string denoting the assigned_tasks edge name in mutations.
+	EdgeAssignedTasks = "assigned_tasks"
+	// EdgeTaskComments holds the string denoting the task_comments edge name in mutations.
+	EdgeTaskComments = "task_comments"
 	// Table holds the table name of the user in the database.
 	Table = "users"
 	// OauthAccountsTable is the table that holds the oauth_accounts relation/edge.
@@ -56,6 +60,20 @@ const (
 	WorkspaceMembersInverseTable = "workspace_members"
 	// WorkspaceMembersColumn is the table column denoting the workspace_members relation/edge.
 	WorkspaceMembersColumn = "user_id"
+	// AssignedTasksTable is the table that holds the assigned_tasks relation/edge.
+	AssignedTasksTable = "tasks"
+	// AssignedTasksInverseTable is the table name for the Task entity.
+	// It exists in this package in order to avoid circular dependency with the "task" package.
+	AssignedTasksInverseTable = "tasks"
+	// AssignedTasksColumn is the table column denoting the assigned_tasks relation/edge.
+	AssignedTasksColumn = "assignee_id"
+	// TaskCommentsTable is the table that holds the task_comments relation/edge.
+	TaskCommentsTable = "task_comments"
+	// TaskCommentsInverseTable is the table name for the TaskComment entity.
+	// It exists in this package in order to avoid circular dependency with the "taskcomment" package.
+	TaskCommentsInverseTable = "task_comments"
+	// TaskCommentsColumn is the table column denoting the task_comments relation/edge.
+	TaskCommentsColumn = "author_id"
 )
 
 // Columns holds all SQL columns for user fields.
@@ -193,6 +211,34 @@ func ByWorkspaceMembers(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption 
 		sqlgraph.OrderByNeighborTerms(s, newWorkspaceMembersStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByAssignedTasksCount orders the results by assigned_tasks count.
+func ByAssignedTasksCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newAssignedTasksStep(), opts...)
+	}
+}
+
+// ByAssignedTasks orders the results by assigned_tasks terms.
+func ByAssignedTasks(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newAssignedTasksStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByTaskCommentsCount orders the results by task_comments count.
+func ByTaskCommentsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newTaskCommentsStep(), opts...)
+	}
+}
+
+// ByTaskComments orders the results by task_comments terms.
+func ByTaskComments(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newTaskCommentsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newOauthAccountsStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -205,5 +251,19 @@ func newWorkspaceMembersStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(WorkspaceMembersInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, WorkspaceMembersTable, WorkspaceMembersColumn),
+	)
+}
+func newAssignedTasksStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(AssignedTasksInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, AssignedTasksTable, AssignedTasksColumn),
+	)
+}
+func newTaskCommentsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(TaskCommentsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, TaskCommentsTable, TaskCommentsColumn),
 	)
 }

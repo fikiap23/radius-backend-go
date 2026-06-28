@@ -33,6 +33,78 @@ func (f ProjectFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, err
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ProjectMutation", m)
 }
 
+// The TaskFunc type is an adapter to allow the use of ordinary
+// function as Task mutator.
+type TaskFunc func(context.Context, *ent.TaskMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f TaskFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.TaskMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.TaskMutation", m)
+}
+
+// The TaskActivityLogFunc type is an adapter to allow the use of ordinary
+// function as TaskActivityLog mutator.
+type TaskActivityLogFunc func(context.Context, *ent.TaskActivityLogMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f TaskActivityLogFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.TaskActivityLogMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.TaskActivityLogMutation", m)
+}
+
+// The TaskAttachmentFunc type is an adapter to allow the use of ordinary
+// function as TaskAttachment mutator.
+type TaskAttachmentFunc func(context.Context, *ent.TaskAttachmentMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f TaskAttachmentFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.TaskAttachmentMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.TaskAttachmentMutation", m)
+}
+
+// The TaskChecklistItemFunc type is an adapter to allow the use of ordinary
+// function as TaskChecklistItem mutator.
+type TaskChecklistItemFunc func(context.Context, *ent.TaskChecklistItemMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f TaskChecklistItemFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.TaskChecklistItemMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.TaskChecklistItemMutation", m)
+}
+
+// The TaskCommentFunc type is an adapter to allow the use of ordinary
+// function as TaskComment mutator.
+type TaskCommentFunc func(context.Context, *ent.TaskCommentMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f TaskCommentFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.TaskCommentMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.TaskCommentMutation", m)
+}
+
+// The TaskSubtaskFunc type is an adapter to allow the use of ordinary
+// function as TaskSubtask mutator.
+type TaskSubtaskFunc func(context.Context, *ent.TaskSubtaskMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f TaskSubtaskFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.TaskSubtaskMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.TaskSubtaskMutation", m)
+}
+
 // The UserFunc type is an adapter to allow the use of ordinary
 // function as User mutator.
 type UserFunc func(context.Context, *ent.UserMutation) (ent.Value, error)

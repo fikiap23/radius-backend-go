@@ -44,6 +44,24 @@ func RequireAuth(auth *middleware.AuthMiddleware, api huma.API) func(huma.Contex
 	}
 }
 
+// OptionalAuth parses a Bearer token when present and sets user ID on context; missing token is allowed.
+func OptionalAuth(auth *middleware.AuthMiddleware, api huma.API) func(huma.Context, func(huma.Context)) {
+	return func(ctx huma.Context, next func(huma.Context)) {
+		ec := humaecho.Unwrap(ctx)
+
+		token, err := auth.ExtractBearerToken(ec.Request().Header.Get("Authorization"))
+		if err == nil {
+			if err := auth.SetUserOnContext(ec, token); err == nil {
+				userID, _ := middleware.GetUserID(ec)
+				req := ec.Request().WithContext(context.WithValue(ec.Request().Context(), userIDContextKey, userID))
+				ec.SetRequest(req)
+			}
+		}
+
+		next(ctx)
+	}
+}
+
 func BearerSecurity() []map[string][]string {
 	return []map[string][]string{{"bearer": {}}}
 }

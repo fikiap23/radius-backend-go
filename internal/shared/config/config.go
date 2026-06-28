@@ -83,17 +83,17 @@ type OAuthProviderConfig struct {
 }
 
 type MinIOConfig struct {
-	Endpoint              string
-	Port                  int
-	UseSSL                bool
-	AccessKey             string
-	SecretKey             string
-	PublicURL             string
-	PresignEndpoint       string
-	BucketName            string
-	PresignExpiry         time.Duration
-	TempCleanupInterval   time.Duration
-	TempMaxAge            time.Duration
+	Endpoint            string
+	Port                int
+	UseSSL              bool
+	AccessKey           string
+	SecretKey           string
+	PublicURL           string
+	PresignEndpoint     string
+	BucketName          string
+	PresignExpiry       time.Duration
+	TempCleanupInterval time.Duration
+	TempMaxAge          time.Duration
 }
 
 func Load() (*Config, error) {

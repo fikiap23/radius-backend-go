@@ -8,9 +8,10 @@ import (
 type UploadPurpose string
 
 const (
-	UploadPurposeAvatar       UploadPurpose = "avatar"
-	UploadPurposeProjectCover UploadPurpose = "project_cover"
-	UploadPurposeAttachment   UploadPurpose = "attachment"
+	UploadPurposeAvatar         UploadPurpose = "avatar"
+	UploadPurposeProjectCover   UploadPurpose = "project_cover"
+	UploadPurposeAttachment     UploadPurpose = "attachment"
+	UploadPurposeTaskAttachment UploadPurpose = "task_attachment"
 )
 
 type PresignedUploadResult struct {
@@ -35,5 +36,7 @@ type ObjectStorage interface {
 	PromoteUserAvatar(ctx context.Context, tempKey string) (publicURL string, err error)
 	PromoteProjectCover(ctx context.Context, tempKey string) (publicURL string, err error)
 	PromoteAttachment(ctx context.Context, tempKey string) (publicURL string, err error)
+	PromoteTaskAttachment(ctx context.Context, tempKey, taskID, attachmentID, fileName string) (storageKey, publicURL string, err error)
+	DeleteObject(ctx context.Context, storageKey string) error
 	CleanupTempUploadsOlderThan(ctx context.Context, olderThan time.Time) (*TempCleanupResult, error)
 }

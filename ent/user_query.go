@@ -13,6 +13,8 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/radius/radius-backend/ent/predicate"
+	"github.com/radius/radius-backend/ent/task"
+	"github.com/radius/radius-backend/ent/taskcomment"
 	"github.com/radius/radius-backend/ent/user"
 	"github.com/radius/radius-backend/ent/useroauthaccount"
 	"github.com/radius/radius-backend/ent/workspacemember"
@@ -27,6 +29,8 @@ type UserQuery struct {
 	predicates           []predicate.User
 	withOauthAccounts    *UserOAuthAccountQuery
 	withWorkspaceMembers *WorkspaceMemberQuery
+	withAssignedTasks    *TaskQuery
+	withTaskComments     *TaskCommentQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -100,6 +104,50 @@ func (uq *UserQuery) QueryWorkspaceMembers() *WorkspaceMemberQuery {
 			sqlgraph.From(user.Table, user.FieldID, selector),
 			sqlgraph.To(workspacemember.Table, workspacemember.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, user.WorkspaceMembersTable, user.WorkspaceMembersColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(uq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryAssignedTasks chains the current query on the "assigned_tasks" edge.
+func (uq *UserQuery) QueryAssignedTasks() *TaskQuery {
+	query := (&TaskClient{config: uq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := uq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := uq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(task.Table, task.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.AssignedTasksTable, user.AssignedTasksColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(uq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryTaskComments chains the current query on the "task_comments" edge.
+func (uq *UserQuery) QueryTaskComments() *TaskCommentQuery {
+	query := (&TaskCommentClient{config: uq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := uq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := uq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(taskcomment.Table, taskcomment.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.TaskCommentsTable, user.TaskCommentsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(uq.driver.Dialect(), step)
 		return fromU, nil
@@ -301,6 +349,8 @@ func (uq *UserQuery) Clone() *UserQuery {
 		predicates:           append([]predicate.User{}, uq.predicates...),
 		withOauthAccounts:    uq.withOauthAccounts.Clone(),
 		withWorkspaceMembers: uq.withWorkspaceMembers.Clone(),
+		withAssignedTasks:    uq.withAssignedTasks.Clone(),
+		withTaskComments:     uq.withTaskComments.Clone(),
 		// clone intermediate query.
 		sql:  uq.sql.Clone(),
 		path: uq.path,
@@ -326,6 +376,28 @@ func (uq *UserQuery) WithWorkspaceMembers(opts ...func(*WorkspaceMemberQuery)) *
 		opt(query)
 	}
 	uq.withWorkspaceMembers = query
+	return uq
+}
+
+// WithAssignedTasks tells the query-builder to eager-load the nodes that are connected to
+// the "assigned_tasks" edge. The optional arguments are used to configure the query builder of the edge.
+func (uq *UserQuery) WithAssignedTasks(opts ...func(*TaskQuery)) *UserQuery {
+	query := (&TaskClient{config: uq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	uq.withAssignedTasks = query
+	return uq
+}
+
+// WithTaskComments tells the query-builder to eager-load the nodes that are connected to
+// the "task_comments" edge. The optional arguments are used to configure the query builder of the edge.
+func (uq *UserQuery) WithTaskComments(opts ...func(*TaskCommentQuery)) *UserQuery {
+	query := (&TaskCommentClient{config: uq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	uq.withTaskComments = query
 	return uq
 }
 
@@ -407,9 +479,11 @@ func (uq *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, e
 	var (
 		nodes       = []*User{}
 		_spec       = uq.querySpec()
-		loadedTypes = [2]bool{
+		loadedTypes = [4]bool{
 			uq.withOauthAccounts != nil,
 			uq.withWorkspaceMembers != nil,
+			uq.withAssignedTasks != nil,
+			uq.withTaskComments != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -441,6 +515,20 @@ func (uq *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, e
 		if err := uq.loadWorkspaceMembers(ctx, query, nodes,
 			func(n *User) { n.Edges.WorkspaceMembers = []*WorkspaceMember{} },
 			func(n *User, e *WorkspaceMember) { n.Edges.WorkspaceMembers = append(n.Edges.WorkspaceMembers, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := uq.withAssignedTasks; query != nil {
+		if err := uq.loadAssignedTasks(ctx, query, nodes,
+			func(n *User) { n.Edges.AssignedTasks = []*Task{} },
+			func(n *User, e *Task) { n.Edges.AssignedTasks = append(n.Edges.AssignedTasks, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := uq.withTaskComments; query != nil {
+		if err := uq.loadTaskComments(ctx, query, nodes,
+			func(n *User) { n.Edges.TaskComments = []*TaskComment{} },
+			func(n *User, e *TaskComment) { n.Edges.TaskComments = append(n.Edges.TaskComments, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -505,6 +593,72 @@ func (uq *UserQuery) loadWorkspaceMembers(ctx context.Context, query *WorkspaceM
 		node, ok := nodeids[*fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "user_id" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (uq *UserQuery) loadAssignedTasks(ctx context.Context, query *TaskQuery, nodes []*User, init func(*User), assign func(*User, *Task)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[string]*User)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(task.FieldAssigneeID)
+	}
+	query.Where(predicate.Task(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(user.AssignedTasksColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.AssigneeID
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "assignee_id" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "assignee_id" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (uq *UserQuery) loadTaskComments(ctx context.Context, query *TaskCommentQuery, nodes []*User, init func(*User), assign func(*User, *TaskComment)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[string]*User)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(taskcomment.FieldAuthorID)
+	}
+	query.Where(predicate.TaskComment(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(user.TaskCommentsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.AuthorID
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "author_id" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "author_id" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

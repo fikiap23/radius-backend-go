@@ -89,6 +89,242 @@ var (
 			},
 		},
 	}
+	// TasksColumns holds the columns for the "tasks" table.
+	TasksColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, SchemaType: map[string]string{"postgres": "uuid"}},
+		{Name: "title", Type: field.TypeString},
+		{Name: "description", Type: field.TypeString, Nullable: true, SchemaType: map[string]string{"postgres": "text"}},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"backlog", "todo", "in_progress", "review", "done"}, Default: "todo"},
+		{Name: "priority", Type: field.TypeEnum, Enums: []string{"low", "medium", "high", "urgent"}, Default: "medium"},
+		{Name: "due_at", Type: field.TypeTime, Nullable: true},
+		{Name: "label_ids", Type: field.TypeJSON},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "column_id", Type: field.TypeString, Nullable: true, SchemaType: map[string]string{"postgres": "uuid"}},
+		{Name: "project_id", Type: field.TypeString, SchemaType: map[string]string{"postgres": "uuid"}},
+		{Name: "assignee_id", Type: field.TypeString, Nullable: true, SchemaType: map[string]string{"postgres": "uuid"}},
+		{Name: "workspace_id", Type: field.TypeString, SchemaType: map[string]string{"postgres": "uuid"}},
+	}
+	// TasksTable holds the schema information for the "tasks" table.
+	TasksTable = &schema.Table{
+		Name:       "tasks",
+		Columns:    TasksColumns,
+		PrimaryKey: []*schema.Column{TasksColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "tasks_board_columns_tasks",
+				Columns:    []*schema.Column{TasksColumns[9]},
+				RefColumns: []*schema.Column{BoardColumnsColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+			{
+				Symbol:     "tasks_projects_tasks",
+				Columns:    []*schema.Column{TasksColumns[10]},
+				RefColumns: []*schema.Column{ProjectsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "tasks_users_assigned_tasks",
+				Columns:    []*schema.Column{TasksColumns[11]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+			{
+				Symbol:     "tasks_workspaces_tasks",
+				Columns:    []*schema.Column{TasksColumns[12]},
+				RefColumns: []*schema.Column{WorkspacesColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "task_project_id",
+				Unique:  false,
+				Columns: []*schema.Column{TasksColumns[10]},
+			},
+			{
+				Name:    "task_workspace_id",
+				Unique:  false,
+				Columns: []*schema.Column{TasksColumns[12]},
+			},
+			{
+				Name:    "task_column_id",
+				Unique:  false,
+				Columns: []*schema.Column{TasksColumns[9]},
+			},
+			{
+				Name:    "task_assignee_id",
+				Unique:  false,
+				Columns: []*schema.Column{TasksColumns[11]},
+			},
+		},
+	}
+	// TaskActivityLogsColumns holds the columns for the "task_activity_logs" table.
+	TaskActivityLogsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, SchemaType: map[string]string{"postgres": "uuid"}},
+		{Name: "title", Type: field.TypeString},
+		{Name: "description", Type: field.TypeString, Nullable: true},
+		{Name: "icon", Type: field.TypeString},
+		{Name: "occurred_at", Type: field.TypeTime},
+		{Name: "task_id", Type: field.TypeString, SchemaType: map[string]string{"postgres": "uuid"}},
+	}
+	// TaskActivityLogsTable holds the schema information for the "task_activity_logs" table.
+	TaskActivityLogsTable = &schema.Table{
+		Name:       "task_activity_logs",
+		Columns:    TaskActivityLogsColumns,
+		PrimaryKey: []*schema.Column{TaskActivityLogsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "task_activity_logs_tasks_activity_logs",
+				Columns:    []*schema.Column{TaskActivityLogsColumns[5]},
+				RefColumns: []*schema.Column{TasksColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "taskactivitylog_task_id",
+				Unique:  false,
+				Columns: []*schema.Column{TaskActivityLogsColumns[5]},
+			},
+			{
+				Name:    "taskactivitylog_occurred_at",
+				Unique:  false,
+				Columns: []*schema.Column{TaskActivityLogsColumns[4]},
+			},
+		},
+	}
+	// TaskAttachmentsColumns holds the columns for the "task_attachments" table.
+	TaskAttachmentsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, SchemaType: map[string]string{"postgres": "uuid"}},
+		{Name: "name", Type: field.TypeString},
+		{Name: "size", Type: field.TypeInt64},
+		{Name: "mime_type", Type: field.TypeString, SchemaType: map[string]string{"postgres": "varchar(120)"}},
+		{Name: "storage_key", Type: field.TypeString, SchemaType: map[string]string{"postgres": "text"}},
+		{Name: "url", Type: field.TypeString, SchemaType: map[string]string{"postgres": "text"}},
+		{Name: "uploaded_at", Type: field.TypeTime},
+		{Name: "task_id", Type: field.TypeString, SchemaType: map[string]string{"postgres": "uuid"}},
+	}
+	// TaskAttachmentsTable holds the schema information for the "task_attachments" table.
+	TaskAttachmentsTable = &schema.Table{
+		Name:       "task_attachments",
+		Columns:    TaskAttachmentsColumns,
+		PrimaryKey: []*schema.Column{TaskAttachmentsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "task_attachments_tasks_attachments",
+				Columns:    []*schema.Column{TaskAttachmentsColumns[7]},
+				RefColumns: []*schema.Column{TasksColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "taskattachment_task_id",
+				Unique:  false,
+				Columns: []*schema.Column{TaskAttachmentsColumns[7]},
+			},
+		},
+	}
+	// TaskChecklistItemsColumns holds the columns for the "task_checklist_items" table.
+	TaskChecklistItemsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, SchemaType: map[string]string{"postgres": "uuid"}},
+		{Name: "text", Type: field.TypeString},
+		{Name: "checked", Type: field.TypeBool, Default: false},
+		{Name: "task_id", Type: field.TypeString, SchemaType: map[string]string{"postgres": "uuid"}},
+	}
+	// TaskChecklistItemsTable holds the schema information for the "task_checklist_items" table.
+	TaskChecklistItemsTable = &schema.Table{
+		Name:       "task_checklist_items",
+		Columns:    TaskChecklistItemsColumns,
+		PrimaryKey: []*schema.Column{TaskChecklistItemsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "task_checklist_items_tasks_checklist_items",
+				Columns:    []*schema.Column{TaskChecklistItemsColumns[3]},
+				RefColumns: []*schema.Column{TasksColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "taskchecklistitem_task_id",
+				Unique:  false,
+				Columns: []*schema.Column{TaskChecklistItemsColumns[3]},
+			},
+		},
+	}
+	// TaskCommentsColumns holds the columns for the "task_comments" table.
+	TaskCommentsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, SchemaType: map[string]string{"postgres": "uuid"}},
+		{Name: "author_name", Type: field.TypeString},
+		{Name: "body", Type: field.TypeString, SchemaType: map[string]string{"postgres": "text"}},
+		{Name: "mention_ids", Type: field.TypeJSON},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "task_id", Type: field.TypeString, SchemaType: map[string]string{"postgres": "uuid"}},
+		{Name: "author_id", Type: field.TypeString, Nullable: true, SchemaType: map[string]string{"postgres": "uuid"}},
+	}
+	// TaskCommentsTable holds the schema information for the "task_comments" table.
+	TaskCommentsTable = &schema.Table{
+		Name:       "task_comments",
+		Columns:    TaskCommentsColumns,
+		PrimaryKey: []*schema.Column{TaskCommentsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "task_comments_tasks_comments",
+				Columns:    []*schema.Column{TaskCommentsColumns[6]},
+				RefColumns: []*schema.Column{TasksColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "task_comments_users_task_comments",
+				Columns:    []*schema.Column{TaskCommentsColumns[7]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "taskcomment_task_id",
+				Unique:  false,
+				Columns: []*schema.Column{TaskCommentsColumns[6]},
+			},
+			{
+				Name:    "taskcomment_author_id",
+				Unique:  false,
+				Columns: []*schema.Column{TaskCommentsColumns[7]},
+			},
+		},
+	}
+	// TaskSubtasksColumns holds the columns for the "task_subtasks" table.
+	TaskSubtasksColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, SchemaType: map[string]string{"postgres": "uuid"}},
+		{Name: "title", Type: field.TypeString},
+		{Name: "done", Type: field.TypeBool, Default: false},
+		{Name: "task_id", Type: field.TypeString, SchemaType: map[string]string{"postgres": "uuid"}},
+	}
+	// TaskSubtasksTable holds the schema information for the "task_subtasks" table.
+	TaskSubtasksTable = &schema.Table{
+		Name:       "task_subtasks",
+		Columns:    TaskSubtasksColumns,
+		PrimaryKey: []*schema.Column{TaskSubtasksColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "task_subtasks_tasks_subtasks",
+				Columns:    []*schema.Column{TaskSubtasksColumns[3]},
+				RefColumns: []*schema.Column{TasksColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "tasksubtask_task_id",
+				Unique:  false,
+				Columns: []*schema.Column{TaskSubtasksColumns[3]},
+			},
+		},
+	}
 	// UsersColumns holds the columns for the "users" table.
 	UsersColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeString, SchemaType: map[string]string{"postgres": "uuid"}},
@@ -219,6 +455,12 @@ var (
 	Tables = []*schema.Table{
 		BoardColumnsTable,
 		ProjectsTable,
+		TasksTable,
+		TaskActivityLogsTable,
+		TaskAttachmentsTable,
+		TaskChecklistItemsTable,
+		TaskCommentsTable,
+		TaskSubtasksTable,
 		UsersTable,
 		UserOauthAccountsTable,
 		WorkspacesTable,
@@ -237,6 +479,34 @@ func init() {
 	}
 	ProjectsTable.Annotation.Checks = map[string]string{
 		"projects_progress_range": "progress >= 0 AND progress <= 100",
+	}
+	TasksTable.ForeignKeys[0].RefTable = BoardColumnsTable
+	TasksTable.ForeignKeys[1].RefTable = ProjectsTable
+	TasksTable.ForeignKeys[2].RefTable = UsersTable
+	TasksTable.ForeignKeys[3].RefTable = WorkspacesTable
+	TasksTable.Annotation = &entsql.Annotation{
+		Table: "tasks",
+	}
+	TaskActivityLogsTable.ForeignKeys[0].RefTable = TasksTable
+	TaskActivityLogsTable.Annotation = &entsql.Annotation{
+		Table: "task_activity_logs",
+	}
+	TaskAttachmentsTable.ForeignKeys[0].RefTable = TasksTable
+	TaskAttachmentsTable.Annotation = &entsql.Annotation{
+		Table: "task_attachments",
+	}
+	TaskChecklistItemsTable.ForeignKeys[0].RefTable = TasksTable
+	TaskChecklistItemsTable.Annotation = &entsql.Annotation{
+		Table: "task_checklist_items",
+	}
+	TaskCommentsTable.ForeignKeys[0].RefTable = TasksTable
+	TaskCommentsTable.ForeignKeys[1].RefTable = UsersTable
+	TaskCommentsTable.Annotation = &entsql.Annotation{
+		Table: "task_comments",
+	}
+	TaskSubtasksTable.ForeignKeys[0].RefTable = TasksTable
+	TaskSubtasksTable.Annotation = &entsql.Annotation{
+		Table: "task_subtasks",
 	}
 	UsersTable.Annotation = &entsql.Annotation{
 		Table: "users",

@@ -69,6 +69,26 @@ func (s *ObjectStorage) PromoteAttachment(ctx context.Context, tempKey string) (
 	return s.promote(ctx, tempKey, sharedstorage.BuildAttachmentKey(tempKey))
 }
 
+func (s *ObjectStorage) PromoteTaskAttachment(ctx context.Context, tempKey, taskID, attachmentID, fileName string) (string, string, error) {
+	destinationKey := sharedstorage.BuildTaskAttachmentKey(taskID, attachmentID, fileName)
+	url, err := s.promote(ctx, tempKey, destinationKey)
+	if err != nil {
+		return "", "", err
+	}
+	return destinationKey, url, nil
+}
+
+func (s *ObjectStorage) DeleteObject(ctx context.Context, storageKey string) error {
+	key := strings.TrimSpace(storageKey)
+	if key == "" {
+		return nil
+	}
+	if err := s.client.RemoveObject(ctx, key); err != nil {
+		return fmt.Errorf("delete object: %w", err)
+	}
+	return nil
+}
+
 func (s *ObjectStorage) promote(ctx context.Context, tempKey, destinationKey string) (string, error) {
 	if err := s.ValidateTempKey(tempKey); err != nil {
 		return "", err

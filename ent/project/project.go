@@ -45,6 +45,8 @@ const (
 	EdgeWorkspace = "workspace"
 	// EdgeBoardColumns holds the string denoting the board_columns edge name in mutations.
 	EdgeBoardColumns = "board_columns"
+	// EdgeTasks holds the string denoting the tasks edge name in mutations.
+	EdgeTasks = "tasks"
 	// Table holds the table name of the project in the database.
 	Table = "projects"
 	// WorkspaceTable is the table that holds the workspace relation/edge.
@@ -61,6 +63,13 @@ const (
 	BoardColumnsInverseTable = "board_columns"
 	// BoardColumnsColumn is the table column denoting the board_columns relation/edge.
 	BoardColumnsColumn = "project_id"
+	// TasksTable is the table that holds the tasks relation/edge.
+	TasksTable = "tasks"
+	// TasksInverseTable is the table name for the Task entity.
+	// It exists in this package in order to avoid circular dependency with the "task" package.
+	TasksInverseTable = "tasks"
+	// TasksColumn is the table column denoting the tasks relation/edge.
+	TasksColumn = "project_id"
 )
 
 // Columns holds all SQL columns for project fields.
@@ -268,6 +277,20 @@ func ByBoardColumns(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newBoardColumnsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByTasksCount orders the results by tasks count.
+func ByTasksCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newTasksStep(), opts...)
+	}
+}
+
+// ByTasks orders the results by tasks terms.
+func ByTasks(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newTasksStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newWorkspaceStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -280,5 +303,12 @@ func newBoardColumnsStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(BoardColumnsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, BoardColumnsTable, BoardColumnsColumn),
+	)
+}
+func newTasksStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(TasksInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, TasksTable, TasksColumn),
 	)
 }

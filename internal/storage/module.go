@@ -8,15 +8,18 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/labstack/echo/v4"
 	"github.com/radius/radius-backend/internal/module"
+	projectpostgres "github.com/radius/radius-backend/internal/projects/infrastructure/db/postgres"
 	"github.com/radius/radius-backend/internal/shared/middleware"
 	"github.com/radius/radius-backend/internal/storage/application/services"
 	"github.com/radius/radius-backend/internal/storage/interface/api/rest"
+	taskpostgres "github.com/radius/radius-backend/internal/tasks/infrastructure/db/postgres"
+	wspostgres "github.com/radius/radius-backend/internal/workspaces/infrastructure/db/postgres"
 	"go.uber.org/zap"
 )
 
 type Module struct {
-	storageSvc      *services.StorageService
-	tempCleanupSvc  *services.TempCleanupService
+	storageSvc     *services.StorageService
+	tempCleanupSvc *services.TempCleanupService
 }
 
 func NewModule() *Module {
@@ -35,7 +38,15 @@ func (m *Module) wire(deps module.Dependencies) error {
 		return fmt.Errorf("object storage is not configured")
 	}
 
-	m.storageSvc = services.NewStorageService(deps.ObjectStorage, deps.Logger)
+	m.storageSvc = services.NewStorageService(
+		deps.ObjectStorage,
+		deps.Logger,
+		services.NewTaskAccessValidator(
+			taskpostgres.NewTaskRepository(deps.Ent),
+			projectpostgres.NewProjectRepository(deps.Ent),
+			wspostgres.NewWorkspaceMemberRepository(deps.Ent),
+		),
+	)
 	m.tempCleanupSvc = services.NewTempCleanupService(
 		deps.ObjectStorage,
 		deps.Config.MinIO.TempMaxAge,
@@ -44,11 +55,11 @@ func (m *Module) wire(deps module.Dependencies) error {
 	return nil
 }
 
-func (m *Module) RegisterHTTP(_ *echo.Echo, api huma.API, deps module.Dependencies, _ *middleware.AuthMiddleware) {
+func (m *Module) RegisterHTTP(_ *echo.Echo, api huma.API, deps module.Dependencies, auth *middleware.AuthMiddleware) {
 	if err := m.wire(deps); err != nil {
 		deps.Logger.Fatal("storage module wire failed", zap.Error(err))
 	}
-	rest.RegisterStorage(api, m.storageSvc, deps.Logger)
+	rest.RegisterStorage(api, m.storageSvc, auth, deps.Logger)
 }
 
 func (m *Module) StartMessaging(ctx context.Context, deps module.Dependencies) (func(), error) {

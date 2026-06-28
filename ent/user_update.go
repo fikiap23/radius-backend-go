@@ -12,6 +12,8 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/radius/radius-backend/ent/predicate"
+	"github.com/radius/radius-backend/ent/task"
+	"github.com/radius/radius-backend/ent/taskcomment"
 	"github.com/radius/radius-backend/ent/user"
 	"github.com/radius/radius-backend/ent/useroauthaccount"
 	"github.com/radius/radius-backend/ent/workspacemember"
@@ -228,6 +230,36 @@ func (uu *UserUpdate) AddWorkspaceMembers(w ...*WorkspaceMember) *UserUpdate {
 	return uu.AddWorkspaceMemberIDs(ids...)
 }
 
+// AddAssignedTaskIDs adds the "assigned_tasks" edge to the Task entity by IDs.
+func (uu *UserUpdate) AddAssignedTaskIDs(ids ...string) *UserUpdate {
+	uu.mutation.AddAssignedTaskIDs(ids...)
+	return uu
+}
+
+// AddAssignedTasks adds the "assigned_tasks" edges to the Task entity.
+func (uu *UserUpdate) AddAssignedTasks(t ...*Task) *UserUpdate {
+	ids := make([]string, len(t))
+	for i := range t {
+		ids[i] = t[i].ID
+	}
+	return uu.AddAssignedTaskIDs(ids...)
+}
+
+// AddTaskCommentIDs adds the "task_comments" edge to the TaskComment entity by IDs.
+func (uu *UserUpdate) AddTaskCommentIDs(ids ...string) *UserUpdate {
+	uu.mutation.AddTaskCommentIDs(ids...)
+	return uu
+}
+
+// AddTaskComments adds the "task_comments" edges to the TaskComment entity.
+func (uu *UserUpdate) AddTaskComments(t ...*TaskComment) *UserUpdate {
+	ids := make([]string, len(t))
+	for i := range t {
+		ids[i] = t[i].ID
+	}
+	return uu.AddTaskCommentIDs(ids...)
+}
+
 // Mutation returns the UserMutation object of the builder.
 func (uu *UserUpdate) Mutation() *UserMutation {
 	return uu.mutation
@@ -273,6 +305,48 @@ func (uu *UserUpdate) RemoveWorkspaceMembers(w ...*WorkspaceMember) *UserUpdate 
 		ids[i] = w[i].ID
 	}
 	return uu.RemoveWorkspaceMemberIDs(ids...)
+}
+
+// ClearAssignedTasks clears all "assigned_tasks" edges to the Task entity.
+func (uu *UserUpdate) ClearAssignedTasks() *UserUpdate {
+	uu.mutation.ClearAssignedTasks()
+	return uu
+}
+
+// RemoveAssignedTaskIDs removes the "assigned_tasks" edge to Task entities by IDs.
+func (uu *UserUpdate) RemoveAssignedTaskIDs(ids ...string) *UserUpdate {
+	uu.mutation.RemoveAssignedTaskIDs(ids...)
+	return uu
+}
+
+// RemoveAssignedTasks removes "assigned_tasks" edges to Task entities.
+func (uu *UserUpdate) RemoveAssignedTasks(t ...*Task) *UserUpdate {
+	ids := make([]string, len(t))
+	for i := range t {
+		ids[i] = t[i].ID
+	}
+	return uu.RemoveAssignedTaskIDs(ids...)
+}
+
+// ClearTaskComments clears all "task_comments" edges to the TaskComment entity.
+func (uu *UserUpdate) ClearTaskComments() *UserUpdate {
+	uu.mutation.ClearTaskComments()
+	return uu
+}
+
+// RemoveTaskCommentIDs removes the "task_comments" edge to TaskComment entities by IDs.
+func (uu *UserUpdate) RemoveTaskCommentIDs(ids ...string) *UserUpdate {
+	uu.mutation.RemoveTaskCommentIDs(ids...)
+	return uu
+}
+
+// RemoveTaskComments removes "task_comments" edges to TaskComment entities.
+func (uu *UserUpdate) RemoveTaskComments(t ...*TaskComment) *UserUpdate {
+	ids := make([]string, len(t))
+	for i := range t {
+		ids[i] = t[i].ID
+	}
+	return uu.RemoveTaskCommentIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -474,6 +548,96 @@ func (uu *UserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(workspacemember.FieldID, field.TypeString),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if uu.mutation.AssignedTasksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.AssignedTasksTable,
+			Columns: []string{user.AssignedTasksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(task.FieldID, field.TypeString),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uu.mutation.RemovedAssignedTasksIDs(); len(nodes) > 0 && !uu.mutation.AssignedTasksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.AssignedTasksTable,
+			Columns: []string{user.AssignedTasksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(task.FieldID, field.TypeString),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uu.mutation.AssignedTasksIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.AssignedTasksTable,
+			Columns: []string{user.AssignedTasksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(task.FieldID, field.TypeString),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if uu.mutation.TaskCommentsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.TaskCommentsTable,
+			Columns: []string{user.TaskCommentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(taskcomment.FieldID, field.TypeString),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uu.mutation.RemovedTaskCommentsIDs(); len(nodes) > 0 && !uu.mutation.TaskCommentsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.TaskCommentsTable,
+			Columns: []string{user.TaskCommentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(taskcomment.FieldID, field.TypeString),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uu.mutation.TaskCommentsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.TaskCommentsTable,
+			Columns: []string{user.TaskCommentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(taskcomment.FieldID, field.TypeString),
 			},
 		}
 		for _, k := range nodes {
@@ -699,6 +863,36 @@ func (uuo *UserUpdateOne) AddWorkspaceMembers(w ...*WorkspaceMember) *UserUpdate
 	return uuo.AddWorkspaceMemberIDs(ids...)
 }
 
+// AddAssignedTaskIDs adds the "assigned_tasks" edge to the Task entity by IDs.
+func (uuo *UserUpdateOne) AddAssignedTaskIDs(ids ...string) *UserUpdateOne {
+	uuo.mutation.AddAssignedTaskIDs(ids...)
+	return uuo
+}
+
+// AddAssignedTasks adds the "assigned_tasks" edges to the Task entity.
+func (uuo *UserUpdateOne) AddAssignedTasks(t ...*Task) *UserUpdateOne {
+	ids := make([]string, len(t))
+	for i := range t {
+		ids[i] = t[i].ID
+	}
+	return uuo.AddAssignedTaskIDs(ids...)
+}
+
+// AddTaskCommentIDs adds the "task_comments" edge to the TaskComment entity by IDs.
+func (uuo *UserUpdateOne) AddTaskCommentIDs(ids ...string) *UserUpdateOne {
+	uuo.mutation.AddTaskCommentIDs(ids...)
+	return uuo
+}
+
+// AddTaskComments adds the "task_comments" edges to the TaskComment entity.
+func (uuo *UserUpdateOne) AddTaskComments(t ...*TaskComment) *UserUpdateOne {
+	ids := make([]string, len(t))
+	for i := range t {
+		ids[i] = t[i].ID
+	}
+	return uuo.AddTaskCommentIDs(ids...)
+}
+
 // Mutation returns the UserMutation object of the builder.
 func (uuo *UserUpdateOne) Mutation() *UserMutation {
 	return uuo.mutation
@@ -744,6 +938,48 @@ func (uuo *UserUpdateOne) RemoveWorkspaceMembers(w ...*WorkspaceMember) *UserUpd
 		ids[i] = w[i].ID
 	}
 	return uuo.RemoveWorkspaceMemberIDs(ids...)
+}
+
+// ClearAssignedTasks clears all "assigned_tasks" edges to the Task entity.
+func (uuo *UserUpdateOne) ClearAssignedTasks() *UserUpdateOne {
+	uuo.mutation.ClearAssignedTasks()
+	return uuo
+}
+
+// RemoveAssignedTaskIDs removes the "assigned_tasks" edge to Task entities by IDs.
+func (uuo *UserUpdateOne) RemoveAssignedTaskIDs(ids ...string) *UserUpdateOne {
+	uuo.mutation.RemoveAssignedTaskIDs(ids...)
+	return uuo
+}
+
+// RemoveAssignedTasks removes "assigned_tasks" edges to Task entities.
+func (uuo *UserUpdateOne) RemoveAssignedTasks(t ...*Task) *UserUpdateOne {
+	ids := make([]string, len(t))
+	for i := range t {
+		ids[i] = t[i].ID
+	}
+	return uuo.RemoveAssignedTaskIDs(ids...)
+}
+
+// ClearTaskComments clears all "task_comments" edges to the TaskComment entity.
+func (uuo *UserUpdateOne) ClearTaskComments() *UserUpdateOne {
+	uuo.mutation.ClearTaskComments()
+	return uuo
+}
+
+// RemoveTaskCommentIDs removes the "task_comments" edge to TaskComment entities by IDs.
+func (uuo *UserUpdateOne) RemoveTaskCommentIDs(ids ...string) *UserUpdateOne {
+	uuo.mutation.RemoveTaskCommentIDs(ids...)
+	return uuo
+}
+
+// RemoveTaskComments removes "task_comments" edges to TaskComment entities.
+func (uuo *UserUpdateOne) RemoveTaskComments(t ...*TaskComment) *UserUpdateOne {
+	ids := make([]string, len(t))
+	for i := range t {
+		ids[i] = t[i].ID
+	}
+	return uuo.RemoveTaskCommentIDs(ids...)
 }
 
 // Where appends a list predicates to the UserUpdate builder.
@@ -975,6 +1211,96 @@ func (uuo *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) 
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(workspacemember.FieldID, field.TypeString),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if uuo.mutation.AssignedTasksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.AssignedTasksTable,
+			Columns: []string{user.AssignedTasksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(task.FieldID, field.TypeString),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uuo.mutation.RemovedAssignedTasksIDs(); len(nodes) > 0 && !uuo.mutation.AssignedTasksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.AssignedTasksTable,
+			Columns: []string{user.AssignedTasksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(task.FieldID, field.TypeString),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uuo.mutation.AssignedTasksIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.AssignedTasksTable,
+			Columns: []string{user.AssignedTasksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(task.FieldID, field.TypeString),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if uuo.mutation.TaskCommentsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.TaskCommentsTable,
+			Columns: []string{user.TaskCommentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(taskcomment.FieldID, field.TypeString),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uuo.mutation.RemovedTaskCommentsIDs(); len(nodes) > 0 && !uuo.mutation.TaskCommentsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.TaskCommentsTable,
+			Columns: []string{user.TaskCommentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(taskcomment.FieldID, field.TypeString),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uuo.mutation.TaskCommentsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.TaskCommentsTable,
+			Columns: []string{user.TaskCommentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(taskcomment.FieldID, field.TypeString),
 			},
 		}
 		for _, k := range nodes {

@@ -1,5 +1,6 @@
-h1:S60QE2enDKH3Aeo2Q55+0N+o+3ckS872M7QOoUmuCqs=
+h1:ky1uPihmmfSj1JyQRZqnm9varjpLVrBWmVGK3X8qc68=
 20260601135111_initial.sql h1:/oQGIaSuBMeIK6V3j6813ilVEQhbMohC3pfjqOr9O5U=
 20260602035540_add_workspaces.sql h1:ekSc5TmJ1be9Aq097qOKX53/+AEyAlB4uGFZAvXwJGM=
 20260606145940_add_projects.sql h1:4P5YWsOGA3cmXAaCl0wxxWAIq0vKzcoJlV4x/Jerknw=
 20260628145443_add_board_columns.sql h1:gVHDLpQiCzzxi05PtmNR9dJLS8LFtlLmRvAPFzEBjt8=
+20260628154144_add_tasks.sql h1:ivXlMgkHkwR1VnFR1+DYbhd0moNiuvA/nsocvL+IGE8=

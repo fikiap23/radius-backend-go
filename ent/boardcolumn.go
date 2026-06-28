@@ -42,9 +42,11 @@ type BoardColumn struct {
 type BoardColumnEdges struct {
 	// Project holds the value of the project edge.
 	Project *Project `json:"project,omitempty"`
+	// Tasks holds the value of the tasks edge.
+	Tasks []*Task `json:"tasks,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [1]bool
+	loadedTypes [2]bool
 }
 
 // ProjectOrErr returns the Project value or an error if the edge
@@ -56,6 +58,15 @@ func (e BoardColumnEdges) ProjectOrErr() (*Project, error) {
 		return nil, &NotFoundError{label: project.Label}
 	}
 	return nil, &NotLoadedError{edge: "project"}
+}
+
+// TasksOrErr returns the Tasks value or an error if the edge
+// was not loaded in eager-loading.
+func (e BoardColumnEdges) TasksOrErr() ([]*Task, error) {
+	if e.loadedTypes[1] {
+		return e.Tasks, nil
+	}
+	return nil, &NotLoadedError{edge: "tasks"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -149,6 +160,11 @@ func (bc *BoardColumn) Value(name string) (ent.Value, error) {
 // QueryProject queries the "project" edge of the BoardColumn entity.
 func (bc *BoardColumn) QueryProject() *ProjectQuery {
 	return NewBoardColumnClient(bc.config).QueryProject(bc)
+}
+
+// QueryTasks queries the "tasks" edge of the BoardColumn entity.
+func (bc *BoardColumn) QueryTasks() *TaskQuery {
+	return NewBoardColumnClient(bc.config).QueryTasks(bc)
 }
 
 // Update returns a builder for updating this BoardColumn.

@@ -17,6 +17,12 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/radius/radius-backend/ent/boardcolumn"
 	"github.com/radius/radius-backend/ent/project"
+	"github.com/radius/radius-backend/ent/task"
+	"github.com/radius/radius-backend/ent/taskactivitylog"
+	"github.com/radius/radius-backend/ent/taskattachment"
+	"github.com/radius/radius-backend/ent/taskchecklistitem"
+	"github.com/radius/radius-backend/ent/taskcomment"
+	"github.com/radius/radius-backend/ent/tasksubtask"
 	"github.com/radius/radius-backend/ent/user"
 	"github.com/radius/radius-backend/ent/useroauthaccount"
 	"github.com/radius/radius-backend/ent/workspace"
@@ -32,6 +38,18 @@ type Client struct {
 	BoardColumn *BoardColumnClient
 	// Project is the client for interacting with the Project builders.
 	Project *ProjectClient
+	// Task is the client for interacting with the Task builders.
+	Task *TaskClient
+	// TaskActivityLog is the client for interacting with the TaskActivityLog builders.
+	TaskActivityLog *TaskActivityLogClient
+	// TaskAttachment is the client for interacting with the TaskAttachment builders.
+	TaskAttachment *TaskAttachmentClient
+	// TaskChecklistItem is the client for interacting with the TaskChecklistItem builders.
+	TaskChecklistItem *TaskChecklistItemClient
+	// TaskComment is the client for interacting with the TaskComment builders.
+	TaskComment *TaskCommentClient
+	// TaskSubtask is the client for interacting with the TaskSubtask builders.
+	TaskSubtask *TaskSubtaskClient
 	// User is the client for interacting with the User builders.
 	User *UserClient
 	// UserOAuthAccount is the client for interacting with the UserOAuthAccount builders.
@@ -53,6 +71,12 @@ func (c *Client) init() {
 	c.Schema = migrate.NewSchema(c.driver)
 	c.BoardColumn = NewBoardColumnClient(c.config)
 	c.Project = NewProjectClient(c.config)
+	c.Task = NewTaskClient(c.config)
+	c.TaskActivityLog = NewTaskActivityLogClient(c.config)
+	c.TaskAttachment = NewTaskAttachmentClient(c.config)
+	c.TaskChecklistItem = NewTaskChecklistItemClient(c.config)
+	c.TaskComment = NewTaskCommentClient(c.config)
+	c.TaskSubtask = NewTaskSubtaskClient(c.config)
 	c.User = NewUserClient(c.config)
 	c.UserOAuthAccount = NewUserOAuthAccountClient(c.config)
 	c.Workspace = NewWorkspaceClient(c.config)
@@ -147,14 +171,20 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	cfg := c.config
 	cfg.driver = tx
 	return &Tx{
-		ctx:              ctx,
-		config:           cfg,
-		BoardColumn:      NewBoardColumnClient(cfg),
-		Project:          NewProjectClient(cfg),
-		User:             NewUserClient(cfg),
-		UserOAuthAccount: NewUserOAuthAccountClient(cfg),
-		Workspace:        NewWorkspaceClient(cfg),
-		WorkspaceMember:  NewWorkspaceMemberClient(cfg),
+		ctx:               ctx,
+		config:            cfg,
+		BoardColumn:       NewBoardColumnClient(cfg),
+		Project:           NewProjectClient(cfg),
+		Task:              NewTaskClient(cfg),
+		TaskActivityLog:   NewTaskActivityLogClient(cfg),
+		TaskAttachment:    NewTaskAttachmentClient(cfg),
+		TaskChecklistItem: NewTaskChecklistItemClient(cfg),
+		TaskComment:       NewTaskCommentClient(cfg),
+		TaskSubtask:       NewTaskSubtaskClient(cfg),
+		User:              NewUserClient(cfg),
+		UserOAuthAccount:  NewUserOAuthAccountClient(cfg),
+		Workspace:         NewWorkspaceClient(cfg),
+		WorkspaceMember:   NewWorkspaceMemberClient(cfg),
 	}, nil
 }
 
@@ -172,14 +202,20 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	cfg := c.config
 	cfg.driver = &txDriver{tx: tx, drv: c.driver}
 	return &Tx{
-		ctx:              ctx,
-		config:           cfg,
-		BoardColumn:      NewBoardColumnClient(cfg),
-		Project:          NewProjectClient(cfg),
-		User:             NewUserClient(cfg),
-		UserOAuthAccount: NewUserOAuthAccountClient(cfg),
-		Workspace:        NewWorkspaceClient(cfg),
-		WorkspaceMember:  NewWorkspaceMemberClient(cfg),
+		ctx:               ctx,
+		config:            cfg,
+		BoardColumn:       NewBoardColumnClient(cfg),
+		Project:           NewProjectClient(cfg),
+		Task:              NewTaskClient(cfg),
+		TaskActivityLog:   NewTaskActivityLogClient(cfg),
+		TaskAttachment:    NewTaskAttachmentClient(cfg),
+		TaskChecklistItem: NewTaskChecklistItemClient(cfg),
+		TaskComment:       NewTaskCommentClient(cfg),
+		TaskSubtask:       NewTaskSubtaskClient(cfg),
+		User:              NewUserClient(cfg),
+		UserOAuthAccount:  NewUserOAuthAccountClient(cfg),
+		Workspace:         NewWorkspaceClient(cfg),
+		WorkspaceMember:   NewWorkspaceMemberClient(cfg),
 	}, nil
 }
 
@@ -209,8 +245,9 @@ func (c *Client) Close() error {
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
-		c.BoardColumn, c.Project, c.User, c.UserOAuthAccount, c.Workspace,
-		c.WorkspaceMember,
+		c.BoardColumn, c.Project, c.Task, c.TaskActivityLog, c.TaskAttachment,
+		c.TaskChecklistItem, c.TaskComment, c.TaskSubtask, c.User, c.UserOAuthAccount,
+		c.Workspace, c.WorkspaceMember,
 	} {
 		n.Use(hooks...)
 	}
@@ -220,8 +257,9 @@ func (c *Client) Use(hooks ...Hook) {
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
-		c.BoardColumn, c.Project, c.User, c.UserOAuthAccount, c.Workspace,
-		c.WorkspaceMember,
+		c.BoardColumn, c.Project, c.Task, c.TaskActivityLog, c.TaskAttachment,
+		c.TaskChecklistItem, c.TaskComment, c.TaskSubtask, c.User, c.UserOAuthAccount,
+		c.Workspace, c.WorkspaceMember,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -234,6 +272,18 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.BoardColumn.mutate(ctx, m)
 	case *ProjectMutation:
 		return c.Project.mutate(ctx, m)
+	case *TaskMutation:
+		return c.Task.mutate(ctx, m)
+	case *TaskActivityLogMutation:
+		return c.TaskActivityLog.mutate(ctx, m)
+	case *TaskAttachmentMutation:
+		return c.TaskAttachment.mutate(ctx, m)
+	case *TaskChecklistItemMutation:
+		return c.TaskChecklistItem.mutate(ctx, m)
+	case *TaskCommentMutation:
+		return c.TaskComment.mutate(ctx, m)
+	case *TaskSubtaskMutation:
+		return c.TaskSubtask.mutate(ctx, m)
 	case *UserMutation:
 		return c.User.mutate(ctx, m)
 	case *UserOAuthAccountMutation:
@@ -364,6 +414,22 @@ func (c *BoardColumnClient) QueryProject(bc *BoardColumn) *ProjectQuery {
 			sqlgraph.From(boardcolumn.Table, boardcolumn.FieldID, id),
 			sqlgraph.To(project.Table, project.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, boardcolumn.ProjectTable, boardcolumn.ProjectColumn),
+		)
+		fromV = sqlgraph.Neighbors(bc.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryTasks queries the tasks edge of a BoardColumn.
+func (c *BoardColumnClient) QueryTasks(bc *BoardColumn) *TaskQuery {
+	query := (&TaskClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := bc.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(boardcolumn.Table, boardcolumn.FieldID, id),
+			sqlgraph.To(task.Table, task.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, boardcolumn.TasksTable, boardcolumn.TasksColumn),
 		)
 		fromV = sqlgraph.Neighbors(bc.driver.Dialect(), step)
 		return fromV, nil
@@ -536,6 +602,22 @@ func (c *ProjectClient) QueryBoardColumns(pr *Project) *BoardColumnQuery {
 	return query
 }
 
+// QueryTasks queries the tasks edge of a Project.
+func (c *ProjectClient) QueryTasks(pr *Project) *TaskQuery {
+	query := (&TaskClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := pr.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(project.Table, project.FieldID, id),
+			sqlgraph.To(task.Table, task.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, project.TasksTable, project.TasksColumn),
+		)
+		fromV = sqlgraph.Neighbors(pr.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *ProjectClient) Hooks() []Hook {
 	return c.hooks.Project
@@ -558,6 +640,1044 @@ func (c *ProjectClient) mutate(ctx context.Context, m *ProjectMutation) (Value, 
 		return (&ProjectDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown Project mutation op: %q", m.Op())
+	}
+}
+
+// TaskClient is a client for the Task schema.
+type TaskClient struct {
+	config
+}
+
+// NewTaskClient returns a client for the Task from the given config.
+func NewTaskClient(c config) *TaskClient {
+	return &TaskClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `task.Hooks(f(g(h())))`.
+func (c *TaskClient) Use(hooks ...Hook) {
+	c.hooks.Task = append(c.hooks.Task, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `task.Intercept(f(g(h())))`.
+func (c *TaskClient) Intercept(interceptors ...Interceptor) {
+	c.inters.Task = append(c.inters.Task, interceptors...)
+}
+
+// Create returns a builder for creating a Task entity.
+func (c *TaskClient) Create() *TaskCreate {
+	mutation := newTaskMutation(c.config, OpCreate)
+	return &TaskCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of Task entities.
+func (c *TaskClient) CreateBulk(builders ...*TaskCreate) *TaskCreateBulk {
+	return &TaskCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *TaskClient) MapCreateBulk(slice any, setFunc func(*TaskCreate, int)) *TaskCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &TaskCreateBulk{err: fmt.Errorf("calling to TaskClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*TaskCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &TaskCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for Task.
+func (c *TaskClient) Update() *TaskUpdate {
+	mutation := newTaskMutation(c.config, OpUpdate)
+	return &TaskUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *TaskClient) UpdateOne(t *Task) *TaskUpdateOne {
+	mutation := newTaskMutation(c.config, OpUpdateOne, withTask(t))
+	return &TaskUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *TaskClient) UpdateOneID(id string) *TaskUpdateOne {
+	mutation := newTaskMutation(c.config, OpUpdateOne, withTaskID(id))
+	return &TaskUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for Task.
+func (c *TaskClient) Delete() *TaskDelete {
+	mutation := newTaskMutation(c.config, OpDelete)
+	return &TaskDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *TaskClient) DeleteOne(t *Task) *TaskDeleteOne {
+	return c.DeleteOneID(t.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *TaskClient) DeleteOneID(id string) *TaskDeleteOne {
+	builder := c.Delete().Where(task.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &TaskDeleteOne{builder}
+}
+
+// Query returns a query builder for Task.
+func (c *TaskClient) Query() *TaskQuery {
+	return &TaskQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeTask},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a Task entity by its id.
+func (c *TaskClient) Get(ctx context.Context, id string) (*Task, error) {
+	return c.Query().Where(task.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *TaskClient) GetX(ctx context.Context, id string) *Task {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryProject queries the project edge of a Task.
+func (c *TaskClient) QueryProject(t *Task) *ProjectQuery {
+	query := (&ProjectClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := t.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(task.Table, task.FieldID, id),
+			sqlgraph.To(project.Table, project.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, task.ProjectTable, task.ProjectColumn),
+		)
+		fromV = sqlgraph.Neighbors(t.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryWorkspace queries the workspace edge of a Task.
+func (c *TaskClient) QueryWorkspace(t *Task) *WorkspaceQuery {
+	query := (&WorkspaceClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := t.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(task.Table, task.FieldID, id),
+			sqlgraph.To(workspace.Table, workspace.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, task.WorkspaceTable, task.WorkspaceColumn),
+		)
+		fromV = sqlgraph.Neighbors(t.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryColumn queries the column edge of a Task.
+func (c *TaskClient) QueryColumn(t *Task) *BoardColumnQuery {
+	query := (&BoardColumnClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := t.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(task.Table, task.FieldID, id),
+			sqlgraph.To(boardcolumn.Table, boardcolumn.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, task.ColumnTable, task.ColumnColumn),
+		)
+		fromV = sqlgraph.Neighbors(t.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryAssignee queries the assignee edge of a Task.
+func (c *TaskClient) QueryAssignee(t *Task) *UserQuery {
+	query := (&UserClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := t.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(task.Table, task.FieldID, id),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, task.AssigneeTable, task.AssigneeColumn),
+		)
+		fromV = sqlgraph.Neighbors(t.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QuerySubtasks queries the subtasks edge of a Task.
+func (c *TaskClient) QuerySubtasks(t *Task) *TaskSubtaskQuery {
+	query := (&TaskSubtaskClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := t.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(task.Table, task.FieldID, id),
+			sqlgraph.To(tasksubtask.Table, tasksubtask.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, task.SubtasksTable, task.SubtasksColumn),
+		)
+		fromV = sqlgraph.Neighbors(t.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryChecklistItems queries the checklist_items edge of a Task.
+func (c *TaskClient) QueryChecklistItems(t *Task) *TaskChecklistItemQuery {
+	query := (&TaskChecklistItemClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := t.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(task.Table, task.FieldID, id),
+			sqlgraph.To(taskchecklistitem.Table, taskchecklistitem.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, task.ChecklistItemsTable, task.ChecklistItemsColumn),
+		)
+		fromV = sqlgraph.Neighbors(t.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryAttachments queries the attachments edge of a Task.
+func (c *TaskClient) QueryAttachments(t *Task) *TaskAttachmentQuery {
+	query := (&TaskAttachmentClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := t.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(task.Table, task.FieldID, id),
+			sqlgraph.To(taskattachment.Table, taskattachment.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, task.AttachmentsTable, task.AttachmentsColumn),
+		)
+		fromV = sqlgraph.Neighbors(t.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryComments queries the comments edge of a Task.
+func (c *TaskClient) QueryComments(t *Task) *TaskCommentQuery {
+	query := (&TaskCommentClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := t.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(task.Table, task.FieldID, id),
+			sqlgraph.To(taskcomment.Table, taskcomment.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, task.CommentsTable, task.CommentsColumn),
+		)
+		fromV = sqlgraph.Neighbors(t.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryActivityLogs queries the activity_logs edge of a Task.
+func (c *TaskClient) QueryActivityLogs(t *Task) *TaskActivityLogQuery {
+	query := (&TaskActivityLogClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := t.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(task.Table, task.FieldID, id),
+			sqlgraph.To(taskactivitylog.Table, taskactivitylog.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, task.ActivityLogsTable, task.ActivityLogsColumn),
+		)
+		fromV = sqlgraph.Neighbors(t.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *TaskClient) Hooks() []Hook {
+	return c.hooks.Task
+}
+
+// Interceptors returns the client interceptors.
+func (c *TaskClient) Interceptors() []Interceptor {
+	return c.inters.Task
+}
+
+func (c *TaskClient) mutate(ctx context.Context, m *TaskMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&TaskCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&TaskUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&TaskUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&TaskDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown Task mutation op: %q", m.Op())
+	}
+}
+
+// TaskActivityLogClient is a client for the TaskActivityLog schema.
+type TaskActivityLogClient struct {
+	config
+}
+
+// NewTaskActivityLogClient returns a client for the TaskActivityLog from the given config.
+func NewTaskActivityLogClient(c config) *TaskActivityLogClient {
+	return &TaskActivityLogClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `taskactivitylog.Hooks(f(g(h())))`.
+func (c *TaskActivityLogClient) Use(hooks ...Hook) {
+	c.hooks.TaskActivityLog = append(c.hooks.TaskActivityLog, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `taskactivitylog.Intercept(f(g(h())))`.
+func (c *TaskActivityLogClient) Intercept(interceptors ...Interceptor) {
+	c.inters.TaskActivityLog = append(c.inters.TaskActivityLog, interceptors...)
+}
+
+// Create returns a builder for creating a TaskActivityLog entity.
+func (c *TaskActivityLogClient) Create() *TaskActivityLogCreate {
+	mutation := newTaskActivityLogMutation(c.config, OpCreate)
+	return &TaskActivityLogCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of TaskActivityLog entities.
+func (c *TaskActivityLogClient) CreateBulk(builders ...*TaskActivityLogCreate) *TaskActivityLogCreateBulk {
+	return &TaskActivityLogCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *TaskActivityLogClient) MapCreateBulk(slice any, setFunc func(*TaskActivityLogCreate, int)) *TaskActivityLogCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &TaskActivityLogCreateBulk{err: fmt.Errorf("calling to TaskActivityLogClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*TaskActivityLogCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &TaskActivityLogCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for TaskActivityLog.
+func (c *TaskActivityLogClient) Update() *TaskActivityLogUpdate {
+	mutation := newTaskActivityLogMutation(c.config, OpUpdate)
+	return &TaskActivityLogUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *TaskActivityLogClient) UpdateOne(tal *TaskActivityLog) *TaskActivityLogUpdateOne {
+	mutation := newTaskActivityLogMutation(c.config, OpUpdateOne, withTaskActivityLog(tal))
+	return &TaskActivityLogUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *TaskActivityLogClient) UpdateOneID(id string) *TaskActivityLogUpdateOne {
+	mutation := newTaskActivityLogMutation(c.config, OpUpdateOne, withTaskActivityLogID(id))
+	return &TaskActivityLogUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for TaskActivityLog.
+func (c *TaskActivityLogClient) Delete() *TaskActivityLogDelete {
+	mutation := newTaskActivityLogMutation(c.config, OpDelete)
+	return &TaskActivityLogDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *TaskActivityLogClient) DeleteOne(tal *TaskActivityLog) *TaskActivityLogDeleteOne {
+	return c.DeleteOneID(tal.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *TaskActivityLogClient) DeleteOneID(id string) *TaskActivityLogDeleteOne {
+	builder := c.Delete().Where(taskactivitylog.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &TaskActivityLogDeleteOne{builder}
+}
+
+// Query returns a query builder for TaskActivityLog.
+func (c *TaskActivityLogClient) Query() *TaskActivityLogQuery {
+	return &TaskActivityLogQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeTaskActivityLog},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a TaskActivityLog entity by its id.
+func (c *TaskActivityLogClient) Get(ctx context.Context, id string) (*TaskActivityLog, error) {
+	return c.Query().Where(taskactivitylog.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *TaskActivityLogClient) GetX(ctx context.Context, id string) *TaskActivityLog {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryTask queries the task edge of a TaskActivityLog.
+func (c *TaskActivityLogClient) QueryTask(tal *TaskActivityLog) *TaskQuery {
+	query := (&TaskClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := tal.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(taskactivitylog.Table, taskactivitylog.FieldID, id),
+			sqlgraph.To(task.Table, task.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, taskactivitylog.TaskTable, taskactivitylog.TaskColumn),
+		)
+		fromV = sqlgraph.Neighbors(tal.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *TaskActivityLogClient) Hooks() []Hook {
+	return c.hooks.TaskActivityLog
+}
+
+// Interceptors returns the client interceptors.
+func (c *TaskActivityLogClient) Interceptors() []Interceptor {
+	return c.inters.TaskActivityLog
+}
+
+func (c *TaskActivityLogClient) mutate(ctx context.Context, m *TaskActivityLogMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&TaskActivityLogCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&TaskActivityLogUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&TaskActivityLogUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&TaskActivityLogDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown TaskActivityLog mutation op: %q", m.Op())
+	}
+}
+
+// TaskAttachmentClient is a client for the TaskAttachment schema.
+type TaskAttachmentClient struct {
+	config
+}
+
+// NewTaskAttachmentClient returns a client for the TaskAttachment from the given config.
+func NewTaskAttachmentClient(c config) *TaskAttachmentClient {
+	return &TaskAttachmentClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `taskattachment.Hooks(f(g(h())))`.
+func (c *TaskAttachmentClient) Use(hooks ...Hook) {
+	c.hooks.TaskAttachment = append(c.hooks.TaskAttachment, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `taskattachment.Intercept(f(g(h())))`.
+func (c *TaskAttachmentClient) Intercept(interceptors ...Interceptor) {
+	c.inters.TaskAttachment = append(c.inters.TaskAttachment, interceptors...)
+}
+
+// Create returns a builder for creating a TaskAttachment entity.
+func (c *TaskAttachmentClient) Create() *TaskAttachmentCreate {
+	mutation := newTaskAttachmentMutation(c.config, OpCreate)
+	return &TaskAttachmentCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of TaskAttachment entities.
+func (c *TaskAttachmentClient) CreateBulk(builders ...*TaskAttachmentCreate) *TaskAttachmentCreateBulk {
+	return &TaskAttachmentCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *TaskAttachmentClient) MapCreateBulk(slice any, setFunc func(*TaskAttachmentCreate, int)) *TaskAttachmentCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &TaskAttachmentCreateBulk{err: fmt.Errorf("calling to TaskAttachmentClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*TaskAttachmentCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &TaskAttachmentCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for TaskAttachment.
+func (c *TaskAttachmentClient) Update() *TaskAttachmentUpdate {
+	mutation := newTaskAttachmentMutation(c.config, OpUpdate)
+	return &TaskAttachmentUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *TaskAttachmentClient) UpdateOne(ta *TaskAttachment) *TaskAttachmentUpdateOne {
+	mutation := newTaskAttachmentMutation(c.config, OpUpdateOne, withTaskAttachment(ta))
+	return &TaskAttachmentUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *TaskAttachmentClient) UpdateOneID(id string) *TaskAttachmentUpdateOne {
+	mutation := newTaskAttachmentMutation(c.config, OpUpdateOne, withTaskAttachmentID(id))
+	return &TaskAttachmentUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for TaskAttachment.
+func (c *TaskAttachmentClient) Delete() *TaskAttachmentDelete {
+	mutation := newTaskAttachmentMutation(c.config, OpDelete)
+	return &TaskAttachmentDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *TaskAttachmentClient) DeleteOne(ta *TaskAttachment) *TaskAttachmentDeleteOne {
+	return c.DeleteOneID(ta.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *TaskAttachmentClient) DeleteOneID(id string) *TaskAttachmentDeleteOne {
+	builder := c.Delete().Where(taskattachment.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &TaskAttachmentDeleteOne{builder}
+}
+
+// Query returns a query builder for TaskAttachment.
+func (c *TaskAttachmentClient) Query() *TaskAttachmentQuery {
+	return &TaskAttachmentQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeTaskAttachment},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a TaskAttachment entity by its id.
+func (c *TaskAttachmentClient) Get(ctx context.Context, id string) (*TaskAttachment, error) {
+	return c.Query().Where(taskattachment.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *TaskAttachmentClient) GetX(ctx context.Context, id string) *TaskAttachment {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryTask queries the task edge of a TaskAttachment.
+func (c *TaskAttachmentClient) QueryTask(ta *TaskAttachment) *TaskQuery {
+	query := (&TaskClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := ta.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(taskattachment.Table, taskattachment.FieldID, id),
+			sqlgraph.To(task.Table, task.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, taskattachment.TaskTable, taskattachment.TaskColumn),
+		)
+		fromV = sqlgraph.Neighbors(ta.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *TaskAttachmentClient) Hooks() []Hook {
+	return c.hooks.TaskAttachment
+}
+
+// Interceptors returns the client interceptors.
+func (c *TaskAttachmentClient) Interceptors() []Interceptor {
+	return c.inters.TaskAttachment
+}
+
+func (c *TaskAttachmentClient) mutate(ctx context.Context, m *TaskAttachmentMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&TaskAttachmentCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&TaskAttachmentUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&TaskAttachmentUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&TaskAttachmentDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown TaskAttachment mutation op: %q", m.Op())
+	}
+}
+
+// TaskChecklistItemClient is a client for the TaskChecklistItem schema.
+type TaskChecklistItemClient struct {
+	config
+}
+
+// NewTaskChecklistItemClient returns a client for the TaskChecklistItem from the given config.
+func NewTaskChecklistItemClient(c config) *TaskChecklistItemClient {
+	return &TaskChecklistItemClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `taskchecklistitem.Hooks(f(g(h())))`.
+func (c *TaskChecklistItemClient) Use(hooks ...Hook) {
+	c.hooks.TaskChecklistItem = append(c.hooks.TaskChecklistItem, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `taskchecklistitem.Intercept(f(g(h())))`.
+func (c *TaskChecklistItemClient) Intercept(interceptors ...Interceptor) {
+	c.inters.TaskChecklistItem = append(c.inters.TaskChecklistItem, interceptors...)
+}
+
+// Create returns a builder for creating a TaskChecklistItem entity.
+func (c *TaskChecklistItemClient) Create() *TaskChecklistItemCreate {
+	mutation := newTaskChecklistItemMutation(c.config, OpCreate)
+	return &TaskChecklistItemCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of TaskChecklistItem entities.
+func (c *TaskChecklistItemClient) CreateBulk(builders ...*TaskChecklistItemCreate) *TaskChecklistItemCreateBulk {
+	return &TaskChecklistItemCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *TaskChecklistItemClient) MapCreateBulk(slice any, setFunc func(*TaskChecklistItemCreate, int)) *TaskChecklistItemCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &TaskChecklistItemCreateBulk{err: fmt.Errorf("calling to TaskChecklistItemClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*TaskChecklistItemCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &TaskChecklistItemCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for TaskChecklistItem.
+func (c *TaskChecklistItemClient) Update() *TaskChecklistItemUpdate {
+	mutation := newTaskChecklistItemMutation(c.config, OpUpdate)
+	return &TaskChecklistItemUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *TaskChecklistItemClient) UpdateOne(tci *TaskChecklistItem) *TaskChecklistItemUpdateOne {
+	mutation := newTaskChecklistItemMutation(c.config, OpUpdateOne, withTaskChecklistItem(tci))
+	return &TaskChecklistItemUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *TaskChecklistItemClient) UpdateOneID(id string) *TaskChecklistItemUpdateOne {
+	mutation := newTaskChecklistItemMutation(c.config, OpUpdateOne, withTaskChecklistItemID(id))
+	return &TaskChecklistItemUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for TaskChecklistItem.
+func (c *TaskChecklistItemClient) Delete() *TaskChecklistItemDelete {
+	mutation := newTaskChecklistItemMutation(c.config, OpDelete)
+	return &TaskChecklistItemDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *TaskChecklistItemClient) DeleteOne(tci *TaskChecklistItem) *TaskChecklistItemDeleteOne {
+	return c.DeleteOneID(tci.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *TaskChecklistItemClient) DeleteOneID(id string) *TaskChecklistItemDeleteOne {
+	builder := c.Delete().Where(taskchecklistitem.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &TaskChecklistItemDeleteOne{builder}
+}
+
+// Query returns a query builder for TaskChecklistItem.
+func (c *TaskChecklistItemClient) Query() *TaskChecklistItemQuery {
+	return &TaskChecklistItemQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeTaskChecklistItem},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a TaskChecklistItem entity by its id.
+func (c *TaskChecklistItemClient) Get(ctx context.Context, id string) (*TaskChecklistItem, error) {
+	return c.Query().Where(taskchecklistitem.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *TaskChecklistItemClient) GetX(ctx context.Context, id string) *TaskChecklistItem {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryTask queries the task edge of a TaskChecklistItem.
+func (c *TaskChecklistItemClient) QueryTask(tci *TaskChecklistItem) *TaskQuery {
+	query := (&TaskClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := tci.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(taskchecklistitem.Table, taskchecklistitem.FieldID, id),
+			sqlgraph.To(task.Table, task.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, taskchecklistitem.TaskTable, taskchecklistitem.TaskColumn),
+		)
+		fromV = sqlgraph.Neighbors(tci.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *TaskChecklistItemClient) Hooks() []Hook {
+	return c.hooks.TaskChecklistItem
+}
+
+// Interceptors returns the client interceptors.
+func (c *TaskChecklistItemClient) Interceptors() []Interceptor {
+	return c.inters.TaskChecklistItem
+}
+
+func (c *TaskChecklistItemClient) mutate(ctx context.Context, m *TaskChecklistItemMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&TaskChecklistItemCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&TaskChecklistItemUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&TaskChecklistItemUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&TaskChecklistItemDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown TaskChecklistItem mutation op: %q", m.Op())
+	}
+}
+
+// TaskCommentClient is a client for the TaskComment schema.
+type TaskCommentClient struct {
+	config
+}
+
+// NewTaskCommentClient returns a client for the TaskComment from the given config.
+func NewTaskCommentClient(c config) *TaskCommentClient {
+	return &TaskCommentClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `taskcomment.Hooks(f(g(h())))`.
+func (c *TaskCommentClient) Use(hooks ...Hook) {
+	c.hooks.TaskComment = append(c.hooks.TaskComment, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `taskcomment.Intercept(f(g(h())))`.
+func (c *TaskCommentClient) Intercept(interceptors ...Interceptor) {
+	c.inters.TaskComment = append(c.inters.TaskComment, interceptors...)
+}
+
+// Create returns a builder for creating a TaskComment entity.
+func (c *TaskCommentClient) Create() *TaskCommentCreate {
+	mutation := newTaskCommentMutation(c.config, OpCreate)
+	return &TaskCommentCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of TaskComment entities.
+func (c *TaskCommentClient) CreateBulk(builders ...*TaskCommentCreate) *TaskCommentCreateBulk {
+	return &TaskCommentCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *TaskCommentClient) MapCreateBulk(slice any, setFunc func(*TaskCommentCreate, int)) *TaskCommentCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &TaskCommentCreateBulk{err: fmt.Errorf("calling to TaskCommentClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*TaskCommentCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &TaskCommentCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for TaskComment.
+func (c *TaskCommentClient) Update() *TaskCommentUpdate {
+	mutation := newTaskCommentMutation(c.config, OpUpdate)
+	return &TaskCommentUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *TaskCommentClient) UpdateOne(tc *TaskComment) *TaskCommentUpdateOne {
+	mutation := newTaskCommentMutation(c.config, OpUpdateOne, withTaskComment(tc))
+	return &TaskCommentUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *TaskCommentClient) UpdateOneID(id string) *TaskCommentUpdateOne {
+	mutation := newTaskCommentMutation(c.config, OpUpdateOne, withTaskCommentID(id))
+	return &TaskCommentUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for TaskComment.
+func (c *TaskCommentClient) Delete() *TaskCommentDelete {
+	mutation := newTaskCommentMutation(c.config, OpDelete)
+	return &TaskCommentDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *TaskCommentClient) DeleteOne(tc *TaskComment) *TaskCommentDeleteOne {
+	return c.DeleteOneID(tc.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *TaskCommentClient) DeleteOneID(id string) *TaskCommentDeleteOne {
+	builder := c.Delete().Where(taskcomment.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &TaskCommentDeleteOne{builder}
+}
+
+// Query returns a query builder for TaskComment.
+func (c *TaskCommentClient) Query() *TaskCommentQuery {
+	return &TaskCommentQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeTaskComment},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a TaskComment entity by its id.
+func (c *TaskCommentClient) Get(ctx context.Context, id string) (*TaskComment, error) {
+	return c.Query().Where(taskcomment.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *TaskCommentClient) GetX(ctx context.Context, id string) *TaskComment {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryTask queries the task edge of a TaskComment.
+func (c *TaskCommentClient) QueryTask(tc *TaskComment) *TaskQuery {
+	query := (&TaskClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := tc.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(taskcomment.Table, taskcomment.FieldID, id),
+			sqlgraph.To(task.Table, task.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, taskcomment.TaskTable, taskcomment.TaskColumn),
+		)
+		fromV = sqlgraph.Neighbors(tc.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryAuthor queries the author edge of a TaskComment.
+func (c *TaskCommentClient) QueryAuthor(tc *TaskComment) *UserQuery {
+	query := (&UserClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := tc.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(taskcomment.Table, taskcomment.FieldID, id),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, taskcomment.AuthorTable, taskcomment.AuthorColumn),
+		)
+		fromV = sqlgraph.Neighbors(tc.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *TaskCommentClient) Hooks() []Hook {
+	return c.hooks.TaskComment
+}
+
+// Interceptors returns the client interceptors.
+func (c *TaskCommentClient) Interceptors() []Interceptor {
+	return c.inters.TaskComment
+}
+
+func (c *TaskCommentClient) mutate(ctx context.Context, m *TaskCommentMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&TaskCommentCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&TaskCommentUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&TaskCommentUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&TaskCommentDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown TaskComment mutation op: %q", m.Op())
+	}
+}
+
+// TaskSubtaskClient is a client for the TaskSubtask schema.
+type TaskSubtaskClient struct {
+	config
+}
+
+// NewTaskSubtaskClient returns a client for the TaskSubtask from the given config.
+func NewTaskSubtaskClient(c config) *TaskSubtaskClient {
+	return &TaskSubtaskClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `tasksubtask.Hooks(f(g(h())))`.
+func (c *TaskSubtaskClient) Use(hooks ...Hook) {
+	c.hooks.TaskSubtask = append(c.hooks.TaskSubtask, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `tasksubtask.Intercept(f(g(h())))`.
+func (c *TaskSubtaskClient) Intercept(interceptors ...Interceptor) {
+	c.inters.TaskSubtask = append(c.inters.TaskSubtask, interceptors...)
+}
+
+// Create returns a builder for creating a TaskSubtask entity.
+func (c *TaskSubtaskClient) Create() *TaskSubtaskCreate {
+	mutation := newTaskSubtaskMutation(c.config, OpCreate)
+	return &TaskSubtaskCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of TaskSubtask entities.
+func (c *TaskSubtaskClient) CreateBulk(builders ...*TaskSubtaskCreate) *TaskSubtaskCreateBulk {
+	return &TaskSubtaskCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *TaskSubtaskClient) MapCreateBulk(slice any, setFunc func(*TaskSubtaskCreate, int)) *TaskSubtaskCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &TaskSubtaskCreateBulk{err: fmt.Errorf("calling to TaskSubtaskClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*TaskSubtaskCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &TaskSubtaskCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for TaskSubtask.
+func (c *TaskSubtaskClient) Update() *TaskSubtaskUpdate {
+	mutation := newTaskSubtaskMutation(c.config, OpUpdate)
+	return &TaskSubtaskUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *TaskSubtaskClient) UpdateOne(ts *TaskSubtask) *TaskSubtaskUpdateOne {
+	mutation := newTaskSubtaskMutation(c.config, OpUpdateOne, withTaskSubtask(ts))
+	return &TaskSubtaskUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *TaskSubtaskClient) UpdateOneID(id string) *TaskSubtaskUpdateOne {
+	mutation := newTaskSubtaskMutation(c.config, OpUpdateOne, withTaskSubtaskID(id))
+	return &TaskSubtaskUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for TaskSubtask.
+func (c *TaskSubtaskClient) Delete() *TaskSubtaskDelete {
+	mutation := newTaskSubtaskMutation(c.config, OpDelete)
+	return &TaskSubtaskDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *TaskSubtaskClient) DeleteOne(ts *TaskSubtask) *TaskSubtaskDeleteOne {
+	return c.DeleteOneID(ts.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *TaskSubtaskClient) DeleteOneID(id string) *TaskSubtaskDeleteOne {
+	builder := c.Delete().Where(tasksubtask.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &TaskSubtaskDeleteOne{builder}
+}
+
+// Query returns a query builder for TaskSubtask.
+func (c *TaskSubtaskClient) Query() *TaskSubtaskQuery {
+	return &TaskSubtaskQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeTaskSubtask},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a TaskSubtask entity by its id.
+func (c *TaskSubtaskClient) Get(ctx context.Context, id string) (*TaskSubtask, error) {
+	return c.Query().Where(tasksubtask.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *TaskSubtaskClient) GetX(ctx context.Context, id string) *TaskSubtask {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryTask queries the task edge of a TaskSubtask.
+func (c *TaskSubtaskClient) QueryTask(ts *TaskSubtask) *TaskQuery {
+	query := (&TaskClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := ts.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(tasksubtask.Table, tasksubtask.FieldID, id),
+			sqlgraph.To(task.Table, task.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, tasksubtask.TaskTable, tasksubtask.TaskColumn),
+		)
+		fromV = sqlgraph.Neighbors(ts.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *TaskSubtaskClient) Hooks() []Hook {
+	return c.hooks.TaskSubtask
+}
+
+// Interceptors returns the client interceptors.
+func (c *TaskSubtaskClient) Interceptors() []Interceptor {
+	return c.inters.TaskSubtask
+}
+
+func (c *TaskSubtaskClient) mutate(ctx context.Context, m *TaskSubtaskMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&TaskSubtaskCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&TaskSubtaskUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&TaskSubtaskUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&TaskSubtaskDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown TaskSubtask mutation op: %q", m.Op())
 	}
 }
 
@@ -694,6 +1814,38 @@ func (c *UserClient) QueryWorkspaceMembers(u *User) *WorkspaceMemberQuery {
 			sqlgraph.From(user.Table, user.FieldID, id),
 			sqlgraph.To(workspacemember.Table, workspacemember.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, user.WorkspaceMembersTable, user.WorkspaceMembersColumn),
+		)
+		fromV = sqlgraph.Neighbors(u.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryAssignedTasks queries the assigned_tasks edge of a User.
+func (c *UserClient) QueryAssignedTasks(u *User) *TaskQuery {
+	query := (&TaskClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := u.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, id),
+			sqlgraph.To(task.Table, task.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.AssignedTasksTable, user.AssignedTasksColumn),
+		)
+		fromV = sqlgraph.Neighbors(u.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryTaskComments queries the task_comments edge of a User.
+func (c *UserClient) QueryTaskComments(u *User) *TaskCommentQuery {
+	query := (&TaskCommentClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := u.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, id),
+			sqlgraph.To(taskcomment.Table, taskcomment.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.TaskCommentsTable, user.TaskCommentsColumn),
 		)
 		fromV = sqlgraph.Neighbors(u.driver.Dialect(), step)
 		return fromV, nil
@@ -1015,6 +2167,22 @@ func (c *WorkspaceClient) QueryProjects(w *Workspace) *ProjectQuery {
 	return query
 }
 
+// QueryTasks queries the tasks edge of a Workspace.
+func (c *WorkspaceClient) QueryTasks(w *Workspace) *TaskQuery {
+	query := (&TaskClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := w.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(workspace.Table, workspace.FieldID, id),
+			sqlgraph.To(task.Table, task.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, workspace.TasksTable, workspace.TasksColumn),
+		)
+		fromV = sqlgraph.Neighbors(w.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *WorkspaceClient) Hooks() []Hook {
 	return c.hooks.Workspace
@@ -1208,11 +2376,13 @@ func (c *WorkspaceMemberClient) mutate(ctx context.Context, m *WorkspaceMemberMu
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		BoardColumn, Project, User, UserOAuthAccount, Workspace,
+		BoardColumn, Project, Task, TaskActivityLog, TaskAttachment, TaskChecklistItem,
+		TaskComment, TaskSubtask, User, UserOAuthAccount, Workspace,
 		WorkspaceMember []ent.Hook
 	}
 	inters struct {
-		BoardColumn, Project, User, UserOAuthAccount, Workspace,
+		BoardColumn, Project, Task, TaskActivityLog, TaskAttachment, TaskChecklistItem,
+		TaskComment, TaskSubtask, User, UserOAuthAccount, Workspace,
 		WorkspaceMember []ent.Interceptor
 	}
 )

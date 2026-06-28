@@ -816,6 +816,52 @@ func HasWorkspaceMembersWith(preds ...predicate.WorkspaceMember) predicate.User 
 	})
 }
 
+// HasAssignedTasks applies the HasEdge predicate on the "assigned_tasks" edge.
+func HasAssignedTasks() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, AssignedTasksTable, AssignedTasksColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasAssignedTasksWith applies the HasEdge predicate on the "assigned_tasks" edge with a given conditions (other predicates).
+func HasAssignedTasksWith(preds ...predicate.Task) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := newAssignedTasksStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasTaskComments applies the HasEdge predicate on the "task_comments" edge.
+func HasTaskComments() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, TaskCommentsTable, TaskCommentsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasTaskCommentsWith applies the HasEdge predicate on the "task_comments" edge with a given conditions (other predicates).
+func HasTaskCommentsWith(preds ...predicate.TaskComment) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := newTaskCommentsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.User) predicate.User {
 	return predicate.User(sql.AndPredicates(predicates...))

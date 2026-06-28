@@ -131,6 +131,16 @@ type Dependencies struct {
 |------------|-------|--------|
 | `User` | `users` | UUID PK, `citext` email, soft delete (`deleted_at`), email format CHECK |
 | `UserOAuthAccount` | `user_oauth_accounts` | FK → users CASCADE; unique `(provider, provider_user_id)` |
+| `Workspace` | `workspaces` | slug unique |
+| `WorkspaceMember` | `workspace_members` | FK → workspace, user; roles + status |
+| `Project` | `projects` | FK → workspace; `open_tasks` counter |
+| `BoardColumn` | `board_columns` | FK → project CASCADE; unique `(project_id, status)` |
+| `Task` | `tasks` | FK → project/workspace; `label_ids` JSON `[]string` |
+| `TaskSubtask` | `task_subtasks` | FK → task CASCADE |
+| `TaskChecklistItem` | `task_checklist_items` | FK → task CASCADE |
+| `TaskAttachment` | `task_attachments` | FK → task CASCADE; `storage_key`, `url` |
+| `TaskComment` | `task_comments` | FK → task CASCADE; `mention_ids` JSON (schema only; no HTTP yet) |
+| `TaskActivityLog` | `task_activity_logs` | FK → task CASCADE |
 
 Regenerate client after schema edits:
 
@@ -341,10 +351,49 @@ Register literal paths like `/users/me` **before** `/users/{id}` in the same con
 | GET | `/users/me` | JWT | `users-get-me` | Current user profile |
 | GET | `/users/{id}` | JWT | `users-get-by-id` | User by UUID |
 | PATCH | `/users/me` | JWT | `users-update-me` | Update profile |
+| GET | `/projects/{projectId}/tasks` | JWT | `projects-tasks-list` | List project tasks with nested subtasks/checklist/attachments |
+| POST | `/projects/{projectId}/tasks` | JWT | `projects-tasks-create` | Create task |
+| PATCH | `/tasks/{taskId}` | JWT | `tasks-update` | Partial update task (nested subtasks/checklist replace-all when provided) |
+| DELETE | `/tasks/{taskId}` | JWT | `tasks-delete` | Delete task |
+| GET | `/tasks/{taskId}/activities` | JWT | `tasks-activities-list` | Task activity history |
+| POST | `/tasks/{taskId}/attachments` | JWT | `tasks-attachments-create` | Confirm attachment after presigned upload |
+| DELETE | `/tasks/{taskId}/attachments/{attachmentId}` | JWT | `tasks-attachments-delete` | Delete attachment |
+| POST | `/storage/presign-upload` | Optional JWT | `storage-presign-upload` | Presigned upload (`task_attachment` requires JWT + `context.taskId`) |
 
 ---
 
-## 9. Bounded context: `users`
+## 9. Bounded context: `tasks`
+
+### Layer map
+
+| Layer | Package | Responsibility |
+|-------|---------|----------------|
+| Domain | `domain/` | `Task`, child entities, enums, repository interfaces, `TaskAccessChecker` |
+| Application | `application/services/` | `TaskService`, `ActivityService`, `AttachmentService` |
+| Application | `application/dto/` | Huma I/O, mappers |
+| Infrastructure | `infrastructure/db/postgres/` | Ent repositories |
+| Interface | `interface/api/rest/` | `RegisterTasks`, `RegisterActivities`, `RegisterAttachments` |
+
+### Domain errors (map in controllers)
+
+| Error | Typical HTTP |
+|-------|----------------|
+| `ErrTaskNotFound` | 404 |
+| `ErrTaskForbidden` | 403 |
+| `ErrTaskInvalidColumn` | 400 |
+| `ErrTaskInvalidAssignee` | 400 |
+| `ErrTaskAttachmentNotFound` | 404 |
+| `ErrProjectNotFound` / `ErrProjectForbidden` | inherited from projects |
+
+### Wiring
+
+[`internal/tasks/module.go`](internal/tasks/module.go): wires project + workspace member repos for auth; `RunTasksInTransaction` includes `Projects.AdjustOpenTasks` for `open_tasks` sync.
+
+Registered in [`bootstrap/app.go`](internal/bootstrap/app.go) after `projects`, before `storage`.
+
+---
+
+## 10. Bounded context: `users`
 
 ### Layer map
 
@@ -378,7 +427,7 @@ Register literal paths like `/users/me` **before** `/users/{id}` in the same con
 
 ---
 
-## 10. Configuration
+## 11. Configuration
 
 - Prefix: `RADIUS_` (Viper maps `database.host` → `RADIUS_DATABASE_HOST`)
 - Sample: [`build/.env.example`](build/.env.example)
@@ -397,7 +446,7 @@ Register literal paths like `/users/me` **before** `/users/{id}` in the same con
 
 ---
 
-## 11. Makefile & local dev
+## 12. Makefile & local dev
 
 Prefer Make targets over ad-hoc Docker commands. Compose project directory is **`build/`** (`--project-directory build`).
 
@@ -417,7 +466,7 @@ Dockerfile: [`build/Dockerfile`](build/Dockerfile) — Go 1.26 Alpine, Air, Atla
 
 ---
 
-## 12. Adding a new HTTP operation (checklist)
+## 13. Adding a new HTTP operation (checklist)
 
 1. **DTO** — `application/dto/` with Huma tags (`json`, `query`, `path`); add `ToDomain()` if needed.
 2. **Service** — `Handle{Action}(ctx, ...)` on the appropriate service; return DTO or domain errors (no HTTP types).
@@ -426,7 +475,7 @@ Dockerfile: [`build/Dockerfile`](build/Dockerfile) — Go 1.26 Alpine, Air, Atla
 5. **OpenAPI** — no manual spec; Huma generates from structs.
 6. **Tests** — add tests for non-trivial domain/pagination/config logic; avoid trivial handler tests unless requested.
 
-## 13. Adding a new bounded context
+## 14. Adding a new bounded context
 
 Mirror `internal/users/`:
 
@@ -445,7 +494,7 @@ internal/<name>/
 3. Add Ent schemas in `ent/schema/` if new tables; migrate.
 4. Do **not** add global middleware in the module.
 
-## 14. Adding a list endpoint with pagination
+## 15. Adding a list endpoint with pagination
 
 1. Embed `pagination.HTTPQuery` in list input DTO.
 2. Add `Params()` calling `ParamsWithSort(defaultBy, allowedFields...)`.
@@ -455,7 +504,7 @@ internal/<name>/
 
 ---
 
-## 15. Testing
+## 16. Testing
 
 - Run: `make test` or `go test ./...`
 - Existing tests: `internal/shared/config`, `internal/shared/humaapi`, `internal/shared/pagination`
@@ -464,7 +513,7 @@ internal/<name>/
 
 ---
 
-## 16. Quick reference — file placement
+## 17. Quick reference — file placement
 
 | What | Where |
 |------|--------|

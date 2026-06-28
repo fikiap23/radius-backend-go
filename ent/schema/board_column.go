@@ -60,6 +60,8 @@ func (BoardColumn) Edges() []ent.Edge {
 			Required().
 			Unique().
 			Immutable(),
+		edge.To("tasks", Task.Type).
+			Annotations(entsql.OnDelete(entsql.SetNull)),
 	}
 }
 

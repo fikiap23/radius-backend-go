@@ -12,9 +12,9 @@ type Fields int
 
 const (
 	FieldsAll     Fields = iota // all columns
-	FieldsProfile              // public profile fields
-	FieldsLogin                // profile + password hash
-	FieldsExists               // id only (existence check)
+	FieldsProfile               // public profile fields
+	FieldsLogin                 // profile + password hash
+	FieldsExists                // id only (existence check)
 )
 
 type Filter struct {

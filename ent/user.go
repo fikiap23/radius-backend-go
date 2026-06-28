@@ -51,9 +51,13 @@ type UserEdges struct {
 	OauthAccounts []*UserOAuthAccount `json:"oauth_accounts,omitempty"`
 	// WorkspaceMembers holds the value of the workspace_members edge.
 	WorkspaceMembers []*WorkspaceMember `json:"workspace_members,omitempty"`
+	// AssignedTasks holds the value of the assigned_tasks edge.
+	AssignedTasks []*Task `json:"assigned_tasks,omitempty"`
+	// TaskComments holds the value of the task_comments edge.
+	TaskComments []*TaskComment `json:"task_comments,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [2]bool
+	loadedTypes [4]bool
 }
 
 // OauthAccountsOrErr returns the OauthAccounts value or an error if the edge
@@ -72,6 +76,24 @@ func (e UserEdges) WorkspaceMembersOrErr() ([]*WorkspaceMember, error) {
 		return e.WorkspaceMembers, nil
 	}
 	return nil, &NotLoadedError{edge: "workspace_members"}
+}
+
+// AssignedTasksOrErr returns the AssignedTasks value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) AssignedTasksOrErr() ([]*Task, error) {
+	if e.loadedTypes[2] {
+		return e.AssignedTasks, nil
+	}
+	return nil, &NotLoadedError{edge: "assigned_tasks"}
+}
+
+// TaskCommentsOrErr returns the TaskComments value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) TaskCommentsOrErr() ([]*TaskComment, error) {
+	if e.loadedTypes[3] {
+		return e.TaskComments, nil
+	}
+	return nil, &NotLoadedError{edge: "task_comments"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -197,6 +219,16 @@ func (u *User) QueryOauthAccounts() *UserOAuthAccountQuery {
 // QueryWorkspaceMembers queries the "workspace_members" edge of the User entity.
 func (u *User) QueryWorkspaceMembers() *WorkspaceMemberQuery {
 	return NewUserClient(u.config).QueryWorkspaceMembers(u)
+}
+
+// QueryAssignedTasks queries the "assigned_tasks" edge of the User entity.
+func (u *User) QueryAssignedTasks() *TaskQuery {
+	return NewUserClient(u.config).QueryAssignedTasks(u)
+}
+
+// QueryTaskComments queries the "task_comments" edge of the User entity.
+func (u *User) QueryTaskComments() *TaskCommentQuery {
+	return NewUserClient(u.config).QueryTaskComments(u)
 }
 
 // Update returns a builder for updating this User.

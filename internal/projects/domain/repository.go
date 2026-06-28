@@ -13,14 +13,14 @@ type ProjectQuery struct {
 }
 
 type ProjectUpdateData struct {
-	Name               *string
-	Description        *string
-	Icon               *string
-	Cover              *ProjectCover
-	CoverImageURL      *string
-	CoverImageTempKey  *string
-	Status             *ProjectStatus
-	IsFavorite         *bool
+	Name              *string
+	Description       *string
+	Icon              *string
+	Cover             *ProjectCover
+	CoverImageURL     *string
+	CoverImageTempKey *string
+	Status            *ProjectStatus
+	IsFavorite        *bool
 }
 
 type ProjectRepository interface {
@@ -32,4 +32,5 @@ type ProjectRepository interface {
 	Archive(ctx context.Context, id string) error
 	Unarchive(ctx context.Context, id string) error
 	DeleteByID(ctx context.Context, id string) error
+	AdjustOpenTasks(ctx context.Context, projectID string, delta int) error
 }

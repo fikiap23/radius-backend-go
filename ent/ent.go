@@ -14,6 +14,12 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/radius/radius-backend/ent/boardcolumn"
 	"github.com/radius/radius-backend/ent/project"
+	"github.com/radius/radius-backend/ent/task"
+	"github.com/radius/radius-backend/ent/taskactivitylog"
+	"github.com/radius/radius-backend/ent/taskattachment"
+	"github.com/radius/radius-backend/ent/taskchecklistitem"
+	"github.com/radius/radius-backend/ent/taskcomment"
+	"github.com/radius/radius-backend/ent/tasksubtask"
 	"github.com/radius/radius-backend/ent/user"
 	"github.com/radius/radius-backend/ent/useroauthaccount"
 	"github.com/radius/radius-backend/ent/workspace"
@@ -78,12 +84,18 @@ var (
 func checkColumn(table, column string) error {
 	initCheck.Do(func() {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
-			boardcolumn.Table:      boardcolumn.ValidColumn,
-			project.Table:          project.ValidColumn,
-			user.Table:             user.ValidColumn,
-			useroauthaccount.Table: useroauthaccount.ValidColumn,
-			workspace.Table:        workspace.ValidColumn,
-			workspacemember.Table:  workspacemember.ValidColumn,
+			boardcolumn.Table:       boardcolumn.ValidColumn,
+			project.Table:           project.ValidColumn,
+			task.Table:              task.ValidColumn,
+			taskactivitylog.Table:   taskactivitylog.ValidColumn,
+			taskattachment.Table:    taskattachment.ValidColumn,
+			taskchecklistitem.Table: taskchecklistitem.ValidColumn,
+			taskcomment.Table:       taskcomment.ValidColumn,
+			tasksubtask.Table:       tasksubtask.ValidColumn,
+			user.Table:              user.ValidColumn,
+			useroauthaccount.Table:  useroauthaccount.ValidColumn,
+			workspace.Table:         workspace.ValidColumn,
+			workspacemember.Table:   workspacemember.ValidColumn,
 		})
 	})
 	return columnCheck(table, column)

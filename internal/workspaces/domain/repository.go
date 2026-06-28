@@ -11,8 +11,8 @@ type WorkspaceFields int
 
 const (
 	WorkspaceFieldsAll     WorkspaceFields = iota // all columns
-	WorkspaceFieldsProfile                       // id, name, slug, timestamps
-	WorkspaceFieldsExists                        // id only
+	WorkspaceFieldsProfile                        // id, name, slug, timestamps
+	WorkspaceFieldsExists                         // id only
 )
 
 type WorkspaceFilter struct {
@@ -48,8 +48,8 @@ type WorkspaceMemberFields int
 
 const (
 	WorkspaceMemberFieldsAll     WorkspaceMemberFields = iota // all columns
-	WorkspaceMemberFieldsProfile                             // list/detail fields
-	WorkspaceMemberFieldsExists                              // id only
+	WorkspaceMemberFieldsProfile                              // list/detail fields
+	WorkspaceMemberFieldsExists                               // id only
 )
 
 type WorkspaceMemberFilter struct {

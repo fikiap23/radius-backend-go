@@ -4,6 +4,7 @@ package ent
 
 import (
 	"context"
+	"database/sql/driver"
 	"fmt"
 	"math"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/radius/radius-backend/ent/boardcolumn"
 	"github.com/radius/radius-backend/ent/predicate"
 	"github.com/radius/radius-backend/ent/project"
+	"github.com/radius/radius-backend/ent/task"
 )
 
 // BoardColumnQuery is the builder for querying BoardColumn entities.
@@ -24,6 +26,7 @@ type BoardColumnQuery struct {
 	inters      []Interceptor
 	predicates  []predicate.BoardColumn
 	withProject *ProjectQuery
+	withTasks   *TaskQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -75,6 +78,28 @@ func (bcq *BoardColumnQuery) QueryProject() *ProjectQuery {
 			sqlgraph.From(boardcolumn.Table, boardcolumn.FieldID, selector),
 			sqlgraph.To(project.Table, project.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, boardcolumn.ProjectTable, boardcolumn.ProjectColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(bcq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryTasks chains the current query on the "tasks" edge.
+func (bcq *BoardColumnQuery) QueryTasks() *TaskQuery {
+	query := (&TaskClient{config: bcq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := bcq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := bcq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(boardcolumn.Table, boardcolumn.FieldID, selector),
+			sqlgraph.To(task.Table, task.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, boardcolumn.TasksTable, boardcolumn.TasksColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(bcq.driver.Dialect(), step)
 		return fromU, nil
@@ -275,6 +300,7 @@ func (bcq *BoardColumnQuery) Clone() *BoardColumnQuery {
 		inters:      append([]Interceptor{}, bcq.inters...),
 		predicates:  append([]predicate.BoardColumn{}, bcq.predicates...),
 		withProject: bcq.withProject.Clone(),
+		withTasks:   bcq.withTasks.Clone(),
 		// clone intermediate query.
 		sql:  bcq.sql.Clone(),
 		path: bcq.path,
@@ -289,6 +315,17 @@ func (bcq *BoardColumnQuery) WithProject(opts ...func(*ProjectQuery)) *BoardColu
 		opt(query)
 	}
 	bcq.withProject = query
+	return bcq
+}
+
+// WithTasks tells the query-builder to eager-load the nodes that are connected to
+// the "tasks" edge. The optional arguments are used to configure the query builder of the edge.
+func (bcq *BoardColumnQuery) WithTasks(opts ...func(*TaskQuery)) *BoardColumnQuery {
+	query := (&TaskClient{config: bcq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	bcq.withTasks = query
 	return bcq
 }
 
@@ -370,8 +407,9 @@ func (bcq *BoardColumnQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]
 	var (
 		nodes       = []*BoardColumn{}
 		_spec       = bcq.querySpec()
-		loadedTypes = [1]bool{
+		loadedTypes = [2]bool{
 			bcq.withProject != nil,
+			bcq.withTasks != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -395,6 +433,13 @@ func (bcq *BoardColumnQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]
 	if query := bcq.withProject; query != nil {
 		if err := bcq.loadProject(ctx, query, nodes, nil,
 			func(n *BoardColumn, e *Project) { n.Edges.Project = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := bcq.withTasks; query != nil {
+		if err := bcq.loadTasks(ctx, query, nodes,
+			func(n *BoardColumn) { n.Edges.Tasks = []*Task{} },
+			func(n *BoardColumn, e *Task) { n.Edges.Tasks = append(n.Edges.Tasks, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -427,6 +472,39 @@ func (bcq *BoardColumnQuery) loadProject(ctx context.Context, query *ProjectQuer
 		for i := range nodes {
 			assign(nodes[i], n)
 		}
+	}
+	return nil
+}
+func (bcq *BoardColumnQuery) loadTasks(ctx context.Context, query *TaskQuery, nodes []*BoardColumn, init func(*BoardColumn), assign func(*BoardColumn, *Task)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[string]*BoardColumn)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(task.FieldColumnID)
+	}
+	query.Where(predicate.Task(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(boardcolumn.TasksColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.ColumnID
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "column_id" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "column_id" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
 	}
 	return nil
 }

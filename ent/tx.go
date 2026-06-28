@@ -16,6 +16,18 @@ type Tx struct {
 	BoardColumn *BoardColumnClient
 	// Project is the client for interacting with the Project builders.
 	Project *ProjectClient
+	// Task is the client for interacting with the Task builders.
+	Task *TaskClient
+	// TaskActivityLog is the client for interacting with the TaskActivityLog builders.
+	TaskActivityLog *TaskActivityLogClient
+	// TaskAttachment is the client for interacting with the TaskAttachment builders.
+	TaskAttachment *TaskAttachmentClient
+	// TaskChecklistItem is the client for interacting with the TaskChecklistItem builders.
+	TaskChecklistItem *TaskChecklistItemClient
+	// TaskComment is the client for interacting with the TaskComment builders.
+	TaskComment *TaskCommentClient
+	// TaskSubtask is the client for interacting with the TaskSubtask builders.
+	TaskSubtask *TaskSubtaskClient
 	// User is the client for interacting with the User builders.
 	User *UserClient
 	// UserOAuthAccount is the client for interacting with the UserOAuthAccount builders.
@@ -157,6 +169,12 @@ func (tx *Tx) Client() *Client {
 func (tx *Tx) init() {
 	tx.BoardColumn = NewBoardColumnClient(tx.config)
 	tx.Project = NewProjectClient(tx.config)
+	tx.Task = NewTaskClient(tx.config)
+	tx.TaskActivityLog = NewTaskActivityLogClient(tx.config)
+	tx.TaskAttachment = NewTaskAttachmentClient(tx.config)
+	tx.TaskChecklistItem = NewTaskChecklistItemClient(tx.config)
+	tx.TaskComment = NewTaskCommentClient(tx.config)
+	tx.TaskSubtask = NewTaskSubtaskClient(tx.config)
 	tx.User = NewUserClient(tx.config)
 	tx.UserOAuthAccount = NewUserOAuthAccountClient(tx.config)
 	tx.Workspace = NewWorkspaceClient(tx.config)

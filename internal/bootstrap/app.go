@@ -14,15 +14,16 @@ import (
 	echomw "github.com/labstack/echo/v4/middleware"
 	"github.com/radius/radius-backend/ent"
 	"github.com/radius/radius-backend/internal/module"
+	"github.com/radius/radius-backend/internal/projects"
 	"github.com/radius/radius-backend/internal/shared/config"
 	"github.com/radius/radius-backend/internal/shared/database"
 	"github.com/radius/radius-backend/internal/shared/httplog"
 	"github.com/radius/radius-backend/internal/shared/humaapi"
 	"github.com/radius/radius-backend/internal/shared/middleware"
 	sharedstorage "github.com/radius/radius-backend/internal/shared/storage"
-	"github.com/radius/radius-backend/internal/projects"
 	"github.com/radius/radius-backend/internal/storage"
 	storageminio "github.com/radius/radius-backend/internal/storage/infrastructure/minio"
+	"github.com/radius/radius-backend/internal/tasks"
 	"github.com/radius/radius-backend/internal/users"
 	"github.com/radius/radius-backend/internal/workspaces"
 	"go.uber.org/zap"
@@ -84,6 +85,7 @@ func Run() error {
 		users.NewModule(),
 		workspaces.NewModule(),
 		projects.NewModule(),
+		tasks.NewModule(),
 		storage.NewModule(),
 	}
 

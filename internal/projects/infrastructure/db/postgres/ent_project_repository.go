@@ -168,6 +168,37 @@ func (r *ProjectRepository) DeleteByID(ctx context.Context, id string) error {
 	return nil
 }
 
+func (r *ProjectRepository) AdjustOpenTasks(ctx context.Context, projectID string, delta int) error {
+	if delta == 0 {
+		return nil
+	}
+
+	row, err := r.client.Project.Query().
+		Where(entproject.IDEQ(projectID)).
+		First(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return domain.ErrProjectNotFound
+		}
+		return fmt.Errorf("load project for open_tasks: %w", err)
+	}
+
+	next := row.OpenTasks + delta
+	if next < 0 {
+		next = 0
+	}
+
+	_, err = r.client.Project.Update().
+		Where(entproject.IDEQ(projectID)).
+		SetOpenTasks(next).
+		SetUpdatedAt(time.Now().UTC()).
+		Save(ctx)
+	if err != nil {
+		return fmt.Errorf("adjust open_tasks: %w", err)
+	}
+	return nil
+}
+
 func buildProjectFilter(f domain.ProjectFilter) []predicate.Project {
 	var preds []predicate.Project
 	if f.ID != nil {

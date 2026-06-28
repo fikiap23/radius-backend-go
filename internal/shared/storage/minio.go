@@ -19,11 +19,11 @@ const defaultRegion = "us-east-1"
 
 // Client wraps dual MinIO clients: internal (Docker network) and presign (browser-facing).
 type Client struct {
-	internal    *minio.Client
-	presign     *minio.Client
-	publicURL   string
-	bucketName  string
-	presignTTL  time.Duration
+	internal   *minio.Client
+	presign    *minio.Client
+	publicURL  string
+	bucketName string
+	presignTTL time.Duration
 }
 
 func NewClient(cfg config.MinIOConfig) (*Client, error) {
@@ -166,10 +166,10 @@ func SafeExtension(filename string) string {
 }
 
 type PresignedUpload struct {
-	BucketName         string
-	Key                string
-	UploadURL          string
-	ExpiresInSeconds   int
+	BucketName       string
+	Key              string
+	UploadURL        string
+	ExpiresInSeconds int
 }
 
 func (c *Client) CreatePresignedUploadURL(ctx context.Context, originalFilename string) (*PresignedUpload, error) {

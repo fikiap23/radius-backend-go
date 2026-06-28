@@ -11,6 +11,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/radius/radius-backend/ent/project"
+	"github.com/radius/radius-backend/ent/task"
 	"github.com/radius/radius-backend/ent/workspace"
 	"github.com/radius/radius-backend/ent/workspacemember"
 )
@@ -104,6 +105,21 @@ func (wc *WorkspaceCreate) AddProjects(p ...*Project) *WorkspaceCreate {
 		ids[i] = p[i].ID
 	}
 	return wc.AddProjectIDs(ids...)
+}
+
+// AddTaskIDs adds the "tasks" edge to the Task entity by IDs.
+func (wc *WorkspaceCreate) AddTaskIDs(ids ...string) *WorkspaceCreate {
+	wc.mutation.AddTaskIDs(ids...)
+	return wc
+}
+
+// AddTasks adds the "tasks" edges to the Task entity.
+func (wc *WorkspaceCreate) AddTasks(t ...*Task) *WorkspaceCreate {
+	ids := make([]string, len(t))
+	for i := range t {
+		ids[i] = t[i].ID
+	}
+	return wc.AddTaskIDs(ids...)
 }
 
 // Mutation returns the WorkspaceMutation object of the builder.
@@ -255,6 +271,22 @@ func (wc *WorkspaceCreate) createSpec() (*Workspace, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(project.FieldID, field.TypeString),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := wc.mutation.TasksIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   workspace.TasksTable,
+			Columns: []string{workspace.TasksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(task.FieldID, field.TypeString),
 			},
 		}
 		for _, k := range nodes {

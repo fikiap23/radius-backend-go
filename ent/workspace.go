@@ -37,9 +37,11 @@ type WorkspaceEdges struct {
 	Members []*WorkspaceMember `json:"members,omitempty"`
 	// Projects holds the value of the projects edge.
 	Projects []*Project `json:"projects,omitempty"`
+	// Tasks holds the value of the tasks edge.
+	Tasks []*Task `json:"tasks,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [2]bool
+	loadedTypes [3]bool
 }
 
 // MembersOrErr returns the Members value or an error if the edge
@@ -58,6 +60,15 @@ func (e WorkspaceEdges) ProjectsOrErr() ([]*Project, error) {
 		return e.Projects, nil
 	}
 	return nil, &NotLoadedError{edge: "projects"}
+}
+
+// TasksOrErr returns the Tasks value or an error if the edge
+// was not loaded in eager-loading.
+func (e WorkspaceEdges) TasksOrErr() ([]*Task, error) {
+	if e.loadedTypes[2] {
+		return e.Tasks, nil
+	}
+	return nil, &NotLoadedError{edge: "tasks"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -135,6 +146,11 @@ func (w *Workspace) QueryMembers() *WorkspaceMemberQuery {
 // QueryProjects queries the "projects" edge of the Workspace entity.
 func (w *Workspace) QueryProjects() *ProjectQuery {
 	return NewWorkspaceClient(w.config).QueryProjects(w)
+}
+
+// QueryTasks queries the "tasks" edge of the Workspace entity.
+func (w *Workspace) QueryTasks() *TaskQuery {
+	return NewWorkspaceClient(w.config).QueryTasks(w)
 }
 
 // Update returns a builder for updating this Workspace.
