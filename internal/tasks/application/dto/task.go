@@ -204,7 +204,7 @@ type UpdateTaskInput struct {
 		Status      *domain.TaskStatus     `json:"status,omitempty" enum:"backlog,todo,in_progress,review,done"`
 		ColumnID    *string                `json:"columnId,omitempty" format:"uuid"`
 		Priority    *domain.TaskPriority   `json:"priority,omitempty" enum:"low,medium,high,urgent"`
-		DueAt       *time.Time             `json:"dueAt"`
+		DueAt       *time.Time             `json:"dueAt,omitempty"`
 		LabelIDs    *[]string              `json:"labelIds,omitempty"`
 		AssigneeID  *string                `json:"assigneeId,omitempty" format:"uuid"`
 		Subtasks    *[]SubtaskPatchInput   `json:"subtasks,omitempty"`

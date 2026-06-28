@@ -72,7 +72,7 @@ type UpdateBoardColumnInput struct {
 	Body      struct {
 		Title    *string `json:"title,omitempty" required:"false" doc:"Column title" minLength:"1" maxLength:"255"`
 		Status   *string `json:"status,omitempty" required:"false" doc:"Column status slug" minLength:"1" maxLength:"64" pattern:"^[a-z][a-z0-9_]*$"`
-		WipLimit *int    `json:"wipLimit" required:"false" nullable:"true" doc:"Work-in-progress limit" minimum:"0"`
+		WipLimit *int    `json:"wipLimit,omitempty" required:"false" nullable:"true" doc:"Work-in-progress limit" minimum:"0"`
 	}
 }
 
