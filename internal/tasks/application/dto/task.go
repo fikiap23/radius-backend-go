@@ -57,6 +57,7 @@ type TaskPatchResponse struct {
 
 type ActivityResponse struct {
 	ID          string    `json:"id"`
+	TaskID      string    `json:"taskId"`
 	Title       string    `json:"title"`
 	Description *string   `json:"description,omitempty"`
 	OccurredAt  time.Time `json:"occurredAt"`
@@ -155,6 +156,7 @@ func MapAttachment(item *domain.TaskAttachment) AttachmentResponse {
 func MapActivity(log *domain.TaskActivityLog) ActivityResponse {
 	return ActivityResponse{
 		ID:          log.ID,
+		TaskID:      log.TaskID,
 		Title:       log.Title,
 		Description: log.Description,
 		OccurredAt:  log.OccurredAt,
