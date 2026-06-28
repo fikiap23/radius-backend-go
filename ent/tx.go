@@ -12,6 +12,8 @@ import (
 // Tx is a transactional client that is created by calling Client.Tx().
 type Tx struct {
 	config
+	// BoardColumn is the client for interacting with the BoardColumn builders.
+	BoardColumn *BoardColumnClient
 	// Project is the client for interacting with the Project builders.
 	Project *ProjectClient
 	// User is the client for interacting with the User builders.
@@ -153,6 +155,7 @@ func (tx *Tx) Client() *Client {
 }
 
 func (tx *Tx) init() {
+	tx.BoardColumn = NewBoardColumnClient(tx.config)
 	tx.Project = NewProjectClient(tx.config)
 	tx.User = NewUserClient(tx.config)
 	tx.UserOAuthAccount = NewUserOAuthAccountClient(tx.config)
@@ -167,7 +170,7 @@ func (tx *Tx) init() {
 // of them in order to commit or rollback the transaction.
 //
 // If a closed transaction is embedded in one of the generated entities, and the entity
-// applies a query, for example: Project.QueryXXX(), the query will be executed
+// applies a query, for example: BoardColumn.QueryXXX(), the query will be executed
 // through the driver which created this transaction.
 //
 // Note that txDriver is not goroutine safe.

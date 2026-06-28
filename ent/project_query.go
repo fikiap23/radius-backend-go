@@ -4,6 +4,7 @@ package ent
 
 import (
 	"context"
+	"database/sql/driver"
 	"fmt"
 	"math"
 
@@ -11,6 +12,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/radius/radius-backend/ent/boardcolumn"
 	"github.com/radius/radius-backend/ent/predicate"
 	"github.com/radius/radius-backend/ent/project"
 	"github.com/radius/radius-backend/ent/workspace"
@@ -19,11 +21,12 @@ import (
 // ProjectQuery is the builder for querying Project entities.
 type ProjectQuery struct {
 	config
-	ctx           *QueryContext
-	order         []project.OrderOption
-	inters        []Interceptor
-	predicates    []predicate.Project
-	withWorkspace *WorkspaceQuery
+	ctx              *QueryContext
+	order            []project.OrderOption
+	inters           []Interceptor
+	predicates       []predicate.Project
+	withWorkspace    *WorkspaceQuery
+	withBoardColumns *BoardColumnQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -75,6 +78,28 @@ func (pq *ProjectQuery) QueryWorkspace() *WorkspaceQuery {
 			sqlgraph.From(project.Table, project.FieldID, selector),
 			sqlgraph.To(workspace.Table, workspace.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, project.WorkspaceTable, project.WorkspaceColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(pq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryBoardColumns chains the current query on the "board_columns" edge.
+func (pq *ProjectQuery) QueryBoardColumns() *BoardColumnQuery {
+	query := (&BoardColumnClient{config: pq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := pq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := pq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(project.Table, project.FieldID, selector),
+			sqlgraph.To(boardcolumn.Table, boardcolumn.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, project.BoardColumnsTable, project.BoardColumnsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(pq.driver.Dialect(), step)
 		return fromU, nil
@@ -269,12 +294,13 @@ func (pq *ProjectQuery) Clone() *ProjectQuery {
 		return nil
 	}
 	return &ProjectQuery{
-		config:        pq.config,
-		ctx:           pq.ctx.Clone(),
-		order:         append([]project.OrderOption{}, pq.order...),
-		inters:        append([]Interceptor{}, pq.inters...),
-		predicates:    append([]predicate.Project{}, pq.predicates...),
-		withWorkspace: pq.withWorkspace.Clone(),
+		config:           pq.config,
+		ctx:              pq.ctx.Clone(),
+		order:            append([]project.OrderOption{}, pq.order...),
+		inters:           append([]Interceptor{}, pq.inters...),
+		predicates:       append([]predicate.Project{}, pq.predicates...),
+		withWorkspace:    pq.withWorkspace.Clone(),
+		withBoardColumns: pq.withBoardColumns.Clone(),
 		// clone intermediate query.
 		sql:  pq.sql.Clone(),
 		path: pq.path,
@@ -289,6 +315,17 @@ func (pq *ProjectQuery) WithWorkspace(opts ...func(*WorkspaceQuery)) *ProjectQue
 		opt(query)
 	}
 	pq.withWorkspace = query
+	return pq
+}
+
+// WithBoardColumns tells the query-builder to eager-load the nodes that are connected to
+// the "board_columns" edge. The optional arguments are used to configure the query builder of the edge.
+func (pq *ProjectQuery) WithBoardColumns(opts ...func(*BoardColumnQuery)) *ProjectQuery {
+	query := (&BoardColumnClient{config: pq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	pq.withBoardColumns = query
 	return pq
 }
 
@@ -370,8 +407,9 @@ func (pq *ProjectQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Proj
 	var (
 		nodes       = []*Project{}
 		_spec       = pq.querySpec()
-		loadedTypes = [1]bool{
+		loadedTypes = [2]bool{
 			pq.withWorkspace != nil,
+			pq.withBoardColumns != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -395,6 +433,13 @@ func (pq *ProjectQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Proj
 	if query := pq.withWorkspace; query != nil {
 		if err := pq.loadWorkspace(ctx, query, nodes, nil,
 			func(n *Project, e *Workspace) { n.Edges.Workspace = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := pq.withBoardColumns; query != nil {
+		if err := pq.loadBoardColumns(ctx, query, nodes,
+			func(n *Project) { n.Edges.BoardColumns = []*BoardColumn{} },
+			func(n *Project, e *BoardColumn) { n.Edges.BoardColumns = append(n.Edges.BoardColumns, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -427,6 +472,36 @@ func (pq *ProjectQuery) loadWorkspace(ctx context.Context, query *WorkspaceQuery
 		for i := range nodes {
 			assign(nodes[i], n)
 		}
+	}
+	return nil
+}
+func (pq *ProjectQuery) loadBoardColumns(ctx context.Context, query *BoardColumnQuery, nodes []*Project, init func(*Project), assign func(*Project, *BoardColumn)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[string]*Project)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(boardcolumn.FieldProjectID)
+	}
+	query.Where(predicate.BoardColumn(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(project.BoardColumnsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.ProjectID
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "project_id" returned %v for node %v`, fk, n.ID)
+		}
+		assign(node, n)
 	}
 	return nil
 }

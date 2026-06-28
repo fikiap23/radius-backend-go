@@ -15,6 +15,7 @@ import (
 	"entgo.io/ent/dialect"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
+	"github.com/radius/radius-backend/ent/boardcolumn"
 	"github.com/radius/radius-backend/ent/project"
 	"github.com/radius/radius-backend/ent/user"
 	"github.com/radius/radius-backend/ent/useroauthaccount"
@@ -27,6 +28,8 @@ type Client struct {
 	config
 	// Schema is the client for creating, migrating and dropping schema.
 	Schema *migrate.Schema
+	// BoardColumn is the client for interacting with the BoardColumn builders.
+	BoardColumn *BoardColumnClient
 	// Project is the client for interacting with the Project builders.
 	Project *ProjectClient
 	// User is the client for interacting with the User builders.
@@ -48,6 +51,7 @@ func NewClient(opts ...Option) *Client {
 
 func (c *Client) init() {
 	c.Schema = migrate.NewSchema(c.driver)
+	c.BoardColumn = NewBoardColumnClient(c.config)
 	c.Project = NewProjectClient(c.config)
 	c.User = NewUserClient(c.config)
 	c.UserOAuthAccount = NewUserOAuthAccountClient(c.config)
@@ -145,6 +149,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	return &Tx{
 		ctx:              ctx,
 		config:           cfg,
+		BoardColumn:      NewBoardColumnClient(cfg),
 		Project:          NewProjectClient(cfg),
 		User:             NewUserClient(cfg),
 		UserOAuthAccount: NewUserOAuthAccountClient(cfg),
@@ -169,6 +174,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	return &Tx{
 		ctx:              ctx,
 		config:           cfg,
+		BoardColumn:      NewBoardColumnClient(cfg),
 		Project:          NewProjectClient(cfg),
 		User:             NewUserClient(cfg),
 		UserOAuthAccount: NewUserOAuthAccountClient(cfg),
@@ -180,7 +186,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 // Debug returns a new debug-client. It's used to get verbose logging on specific operations.
 //
 //	client.Debug().
-//		Project.
+//		BoardColumn.
 //		Query().
 //		Count(ctx)
 func (c *Client) Debug() *Client {
@@ -202,26 +208,30 @@ func (c *Client) Close() error {
 // Use adds the mutation hooks to all the entity clients.
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
-	c.Project.Use(hooks...)
-	c.User.Use(hooks...)
-	c.UserOAuthAccount.Use(hooks...)
-	c.Workspace.Use(hooks...)
-	c.WorkspaceMember.Use(hooks...)
+	for _, n := range []interface{ Use(...Hook) }{
+		c.BoardColumn, c.Project, c.User, c.UserOAuthAccount, c.Workspace,
+		c.WorkspaceMember,
+	} {
+		n.Use(hooks...)
+	}
 }
 
 // Intercept adds the query interceptors to all the entity clients.
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
-	c.Project.Intercept(interceptors...)
-	c.User.Intercept(interceptors...)
-	c.UserOAuthAccount.Intercept(interceptors...)
-	c.Workspace.Intercept(interceptors...)
-	c.WorkspaceMember.Intercept(interceptors...)
+	for _, n := range []interface{ Intercept(...Interceptor) }{
+		c.BoardColumn, c.Project, c.User, c.UserOAuthAccount, c.Workspace,
+		c.WorkspaceMember,
+	} {
+		n.Intercept(interceptors...)
+	}
 }
 
 // Mutate implements the ent.Mutator interface.
 func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 	switch m := m.(type) {
+	case *BoardColumnMutation:
+		return c.BoardColumn.mutate(ctx, m)
 	case *ProjectMutation:
 		return c.Project.mutate(ctx, m)
 	case *UserMutation:
@@ -234,6 +244,155 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.WorkspaceMember.mutate(ctx, m)
 	default:
 		return nil, fmt.Errorf("ent: unknown mutation type %T", m)
+	}
+}
+
+// BoardColumnClient is a client for the BoardColumn schema.
+type BoardColumnClient struct {
+	config
+}
+
+// NewBoardColumnClient returns a client for the BoardColumn from the given config.
+func NewBoardColumnClient(c config) *BoardColumnClient {
+	return &BoardColumnClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `boardcolumn.Hooks(f(g(h())))`.
+func (c *BoardColumnClient) Use(hooks ...Hook) {
+	c.hooks.BoardColumn = append(c.hooks.BoardColumn, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `boardcolumn.Intercept(f(g(h())))`.
+func (c *BoardColumnClient) Intercept(interceptors ...Interceptor) {
+	c.inters.BoardColumn = append(c.inters.BoardColumn, interceptors...)
+}
+
+// Create returns a builder for creating a BoardColumn entity.
+func (c *BoardColumnClient) Create() *BoardColumnCreate {
+	mutation := newBoardColumnMutation(c.config, OpCreate)
+	return &BoardColumnCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of BoardColumn entities.
+func (c *BoardColumnClient) CreateBulk(builders ...*BoardColumnCreate) *BoardColumnCreateBulk {
+	return &BoardColumnCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *BoardColumnClient) MapCreateBulk(slice any, setFunc func(*BoardColumnCreate, int)) *BoardColumnCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &BoardColumnCreateBulk{err: fmt.Errorf("calling to BoardColumnClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*BoardColumnCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &BoardColumnCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for BoardColumn.
+func (c *BoardColumnClient) Update() *BoardColumnUpdate {
+	mutation := newBoardColumnMutation(c.config, OpUpdate)
+	return &BoardColumnUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *BoardColumnClient) UpdateOne(bc *BoardColumn) *BoardColumnUpdateOne {
+	mutation := newBoardColumnMutation(c.config, OpUpdateOne, withBoardColumn(bc))
+	return &BoardColumnUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *BoardColumnClient) UpdateOneID(id string) *BoardColumnUpdateOne {
+	mutation := newBoardColumnMutation(c.config, OpUpdateOne, withBoardColumnID(id))
+	return &BoardColumnUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for BoardColumn.
+func (c *BoardColumnClient) Delete() *BoardColumnDelete {
+	mutation := newBoardColumnMutation(c.config, OpDelete)
+	return &BoardColumnDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *BoardColumnClient) DeleteOne(bc *BoardColumn) *BoardColumnDeleteOne {
+	return c.DeleteOneID(bc.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *BoardColumnClient) DeleteOneID(id string) *BoardColumnDeleteOne {
+	builder := c.Delete().Where(boardcolumn.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &BoardColumnDeleteOne{builder}
+}
+
+// Query returns a query builder for BoardColumn.
+func (c *BoardColumnClient) Query() *BoardColumnQuery {
+	return &BoardColumnQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeBoardColumn},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a BoardColumn entity by its id.
+func (c *BoardColumnClient) Get(ctx context.Context, id string) (*BoardColumn, error) {
+	return c.Query().Where(boardcolumn.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *BoardColumnClient) GetX(ctx context.Context, id string) *BoardColumn {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryProject queries the project edge of a BoardColumn.
+func (c *BoardColumnClient) QueryProject(bc *BoardColumn) *ProjectQuery {
+	query := (&ProjectClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := bc.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(boardcolumn.Table, boardcolumn.FieldID, id),
+			sqlgraph.To(project.Table, project.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, boardcolumn.ProjectTable, boardcolumn.ProjectColumn),
+		)
+		fromV = sqlgraph.Neighbors(bc.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *BoardColumnClient) Hooks() []Hook {
+	return c.hooks.BoardColumn
+}
+
+// Interceptors returns the client interceptors.
+func (c *BoardColumnClient) Interceptors() []Interceptor {
+	return c.inters.BoardColumn
+}
+
+func (c *BoardColumnClient) mutate(ctx context.Context, m *BoardColumnMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&BoardColumnCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&BoardColumnUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&BoardColumnUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&BoardColumnDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown BoardColumn mutation op: %q", m.Op())
 	}
 }
 
@@ -354,6 +513,22 @@ func (c *ProjectClient) QueryWorkspace(pr *Project) *WorkspaceQuery {
 			sqlgraph.From(project.Table, project.FieldID, id),
 			sqlgraph.To(workspace.Table, workspace.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, project.WorkspaceTable, project.WorkspaceColumn),
+		)
+		fromV = sqlgraph.Neighbors(pr.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryBoardColumns queries the board_columns edge of a Project.
+func (c *ProjectClient) QueryBoardColumns(pr *Project) *BoardColumnQuery {
+	query := (&BoardColumnClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := pr.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(project.Table, project.FieldID, id),
+			sqlgraph.To(boardcolumn.Table, boardcolumn.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, project.BoardColumnsTable, project.BoardColumnsColumn),
 		)
 		fromV = sqlgraph.Neighbors(pr.driver.Dialect(), step)
 		return fromV, nil
@@ -1033,9 +1208,11 @@ func (c *WorkspaceMemberClient) mutate(ctx context.Context, m *WorkspaceMemberMu
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		Project, User, UserOAuthAccount, Workspace, WorkspaceMember []ent.Hook
+		BoardColumn, Project, User, UserOAuthAccount, Workspace,
+		WorkspaceMember []ent.Hook
 	}
 	inters struct {
-		Project, User, UserOAuthAccount, Workspace, WorkspaceMember []ent.Interceptor
+		BoardColumn, Project, User, UserOAuthAccount, Workspace,
+		WorkspaceMember []ent.Interceptor
 	}
 )

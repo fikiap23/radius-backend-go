@@ -748,6 +748,29 @@ func HasWorkspaceWith(preds ...predicate.Workspace) predicate.Project {
 	})
 }
 
+// HasBoardColumns applies the HasEdge predicate on the "board_columns" edge.
+func HasBoardColumns() predicate.Project {
+	return predicate.Project(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, BoardColumnsTable, BoardColumnsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasBoardColumnsWith applies the HasEdge predicate on the "board_columns" edge with a given conditions (other predicates).
+func HasBoardColumnsWith(preds ...predicate.BoardColumn) predicate.Project {
+	return predicate.Project(func(s *sql.Selector) {
+		step := newBoardColumnsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.Project) predicate.Project {
 	return predicate.Project(sql.AndPredicates(predicates...))

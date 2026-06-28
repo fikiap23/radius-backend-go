@@ -82,6 +82,8 @@ func (Project) Edges() []ent.Edge {
 			Required().
 			Unique().
 			Immutable(),
+		edge.To("board_columns", BoardColumn.Type).
+			Annotations(entsql.OnDelete(entsql.Cascade)),
 	}
 }
 

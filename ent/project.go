@@ -54,9 +54,11 @@ type Project struct {
 type ProjectEdges struct {
 	// Workspace holds the value of the workspace edge.
 	Workspace *Workspace `json:"workspace,omitempty"`
+	// BoardColumns holds the value of the board_columns edge.
+	BoardColumns []*BoardColumn `json:"board_columns,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [1]bool
+	loadedTypes [2]bool
 }
 
 // WorkspaceOrErr returns the Workspace value or an error if the edge
@@ -68,6 +70,15 @@ func (e ProjectEdges) WorkspaceOrErr() (*Workspace, error) {
 		return nil, &NotFoundError{label: workspace.Label}
 	}
 	return nil, &NotLoadedError{edge: "workspace"}
+}
+
+// BoardColumnsOrErr returns the BoardColumns value or an error if the edge
+// was not loaded in eager-loading.
+func (e ProjectEdges) BoardColumnsOrErr() ([]*BoardColumn, error) {
+	if e.loadedTypes[1] {
+		return e.BoardColumns, nil
+	}
+	return nil, &NotLoadedError{edge: "board_columns"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -201,6 +212,11 @@ func (pr *Project) Value(name string) (ent.Value, error) {
 // QueryWorkspace queries the "workspace" edge of the Project entity.
 func (pr *Project) QueryWorkspace() *WorkspaceQuery {
 	return NewProjectClient(pr.config).QueryWorkspace(pr)
+}
+
+// QueryBoardColumns queries the "board_columns" edge of the Project entity.
+func (pr *Project) QueryBoardColumns() *BoardColumnQuery {
+	return NewProjectClient(pr.config).QueryBoardColumns(pr)
 }
 
 // Update returns a builder for updating this Project.

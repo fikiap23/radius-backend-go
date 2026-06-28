@@ -43,6 +43,8 @@ const (
 	FieldUpdatedAt = "updated_at"
 	// EdgeWorkspace holds the string denoting the workspace edge name in mutations.
 	EdgeWorkspace = "workspace"
+	// EdgeBoardColumns holds the string denoting the board_columns edge name in mutations.
+	EdgeBoardColumns = "board_columns"
 	// Table holds the table name of the project in the database.
 	Table = "projects"
 	// WorkspaceTable is the table that holds the workspace relation/edge.
@@ -52,6 +54,13 @@ const (
 	WorkspaceInverseTable = "workspaces"
 	// WorkspaceColumn is the table column denoting the workspace relation/edge.
 	WorkspaceColumn = "workspace_id"
+	// BoardColumnsTable is the table that holds the board_columns relation/edge.
+	BoardColumnsTable = "board_columns"
+	// BoardColumnsInverseTable is the table name for the BoardColumn entity.
+	// It exists in this package in order to avoid circular dependency with the "boardcolumn" package.
+	BoardColumnsInverseTable = "board_columns"
+	// BoardColumnsColumn is the table column denoting the board_columns relation/edge.
+	BoardColumnsColumn = "project_id"
 )
 
 // Columns holds all SQL columns for project fields.
@@ -245,10 +254,31 @@ func ByWorkspaceField(field string, opts ...sql.OrderTermOption) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newWorkspaceStep(), sql.OrderByField(field, opts...))
 	}
 }
+
+// ByBoardColumnsCount orders the results by board_columns count.
+func ByBoardColumnsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newBoardColumnsStep(), opts...)
+	}
+}
+
+// ByBoardColumns orders the results by board_columns terms.
+func ByBoardColumns(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newBoardColumnsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newWorkspaceStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(WorkspaceInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.M2O, true, WorkspaceTable, WorkspaceColumn),
+	)
+}
+func newBoardColumnsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(BoardColumnsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, BoardColumnsTable, BoardColumnsColumn),
 	)
 }

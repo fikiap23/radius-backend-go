@@ -9,6 +9,48 @@ import (
 )
 
 var (
+	// BoardColumnsColumns holds the columns for the "board_columns" table.
+	BoardColumnsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, SchemaType: map[string]string{"postgres": "uuid"}},
+		{Name: "title", Type: field.TypeString},
+		{Name: "status", Type: field.TypeString, SchemaType: map[string]string{"postgres": "varchar(64)"}},
+		{Name: "wip_limit", Type: field.TypeInt, Nullable: true},
+		{Name: "sort_order", Type: field.TypeInt, Default: 0},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "project_id", Type: field.TypeString, SchemaType: map[string]string{"postgres": "uuid"}},
+	}
+	// BoardColumnsTable holds the schema information for the "board_columns" table.
+	BoardColumnsTable = &schema.Table{
+		Name:       "board_columns",
+		Columns:    BoardColumnsColumns,
+		PrimaryKey: []*schema.Column{BoardColumnsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "board_columns_projects_board_columns",
+				Columns:    []*schema.Column{BoardColumnsColumns[7]},
+				RefColumns: []*schema.Column{ProjectsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "boardcolumn_project_id",
+				Unique:  false,
+				Columns: []*schema.Column{BoardColumnsColumns[7]},
+			},
+			{
+				Name:    "boardcolumn_project_id_status",
+				Unique:  true,
+				Columns: []*schema.Column{BoardColumnsColumns[7], BoardColumnsColumns[2]},
+			},
+			{
+				Name:    "boardcolumn_project_id_sort_order",
+				Unique:  false,
+				Columns: []*schema.Column{BoardColumnsColumns[7], BoardColumnsColumns[4]},
+			},
+		},
+	}
 	// ProjectsColumns holds the columns for the "projects" table.
 	ProjectsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeString, SchemaType: map[string]string{"postgres": "uuid"}},
@@ -175,6 +217,7 @@ var (
 	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
+		BoardColumnsTable,
 		ProjectsTable,
 		UsersTable,
 		UserOauthAccountsTable,
@@ -184,6 +227,10 @@ var (
 )
 
 func init() {
+	BoardColumnsTable.ForeignKeys[0].RefTable = ProjectsTable
+	BoardColumnsTable.Annotation = &entsql.Annotation{
+		Table: "board_columns",
+	}
 	ProjectsTable.ForeignKeys[0].RefTable = WorkspacesTable
 	ProjectsTable.Annotation = &entsql.Annotation{
 		Table: "projects",

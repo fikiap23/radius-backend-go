@@ -10,6 +10,7 @@ import (
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/radius/radius-backend/ent/boardcolumn"
 	"github.com/radius/radius-backend/ent/project"
 	"github.com/radius/radius-backend/ent/workspace"
 )
@@ -204,6 +205,21 @@ func (pc *ProjectCreate) SetNillableID(s *string) *ProjectCreate {
 // SetWorkspace sets the "workspace" edge to the Workspace entity.
 func (pc *ProjectCreate) SetWorkspace(w *Workspace) *ProjectCreate {
 	return pc.SetWorkspaceID(w.ID)
+}
+
+// AddBoardColumnIDs adds the "board_columns" edge to the BoardColumn entity by IDs.
+func (pc *ProjectCreate) AddBoardColumnIDs(ids ...string) *ProjectCreate {
+	pc.mutation.AddBoardColumnIDs(ids...)
+	return pc
+}
+
+// AddBoardColumns adds the "board_columns" edges to the BoardColumn entity.
+func (pc *ProjectCreate) AddBoardColumns(b ...*BoardColumn) *ProjectCreate {
+	ids := make([]string, len(b))
+	for i := range b {
+		ids[i] = b[i].ID
+	}
+	return pc.AddBoardColumnIDs(ids...)
 }
 
 // Mutation returns the ProjectMutation object of the builder.
@@ -442,6 +458,22 @@ func (pc *ProjectCreate) createSpec() (*Project, *sqlgraph.CreateSpec) {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_node.WorkspaceID = nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := pc.mutation.BoardColumnsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   project.BoardColumnsTable,
+			Columns: []string{project.BoardColumnsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(boardcolumn.FieldID, field.TypeString),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

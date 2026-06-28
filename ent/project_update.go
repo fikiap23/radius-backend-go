@@ -11,6 +11,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/radius/radius-backend/ent/boardcolumn"
 	"github.com/radius/radius-backend/ent/predicate"
 	"github.com/radius/radius-backend/ent/project"
 )
@@ -206,9 +207,45 @@ func (pu *ProjectUpdate) SetUpdatedAt(t time.Time) *ProjectUpdate {
 	return pu
 }
 
+// AddBoardColumnIDs adds the "board_columns" edge to the BoardColumn entity by IDs.
+func (pu *ProjectUpdate) AddBoardColumnIDs(ids ...string) *ProjectUpdate {
+	pu.mutation.AddBoardColumnIDs(ids...)
+	return pu
+}
+
+// AddBoardColumns adds the "board_columns" edges to the BoardColumn entity.
+func (pu *ProjectUpdate) AddBoardColumns(b ...*BoardColumn) *ProjectUpdate {
+	ids := make([]string, len(b))
+	for i := range b {
+		ids[i] = b[i].ID
+	}
+	return pu.AddBoardColumnIDs(ids...)
+}
+
 // Mutation returns the ProjectMutation object of the builder.
 func (pu *ProjectUpdate) Mutation() *ProjectMutation {
 	return pu.mutation
+}
+
+// ClearBoardColumns clears all "board_columns" edges to the BoardColumn entity.
+func (pu *ProjectUpdate) ClearBoardColumns() *ProjectUpdate {
+	pu.mutation.ClearBoardColumns()
+	return pu
+}
+
+// RemoveBoardColumnIDs removes the "board_columns" edge to BoardColumn entities by IDs.
+func (pu *ProjectUpdate) RemoveBoardColumnIDs(ids ...string) *ProjectUpdate {
+	pu.mutation.RemoveBoardColumnIDs(ids...)
+	return pu
+}
+
+// RemoveBoardColumns removes "board_columns" edges to BoardColumn entities.
+func (pu *ProjectUpdate) RemoveBoardColumns(b ...*BoardColumn) *ProjectUpdate {
+	ids := make([]string, len(b))
+	for i := range b {
+		ids[i] = b[i].ID
+	}
+	return pu.RemoveBoardColumnIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -344,6 +381,51 @@ func (pu *ProjectUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if value, ok := pu.mutation.UpdatedAt(); ok {
 		_spec.SetField(project.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if pu.mutation.BoardColumnsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   project.BoardColumnsTable,
+			Columns: []string{project.BoardColumnsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(boardcolumn.FieldID, field.TypeString),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := pu.mutation.RemovedBoardColumnsIDs(); len(nodes) > 0 && !pu.mutation.BoardColumnsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   project.BoardColumnsTable,
+			Columns: []string{project.BoardColumnsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(boardcolumn.FieldID, field.TypeString),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := pu.mutation.BoardColumnsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   project.BoardColumnsTable,
+			Columns: []string{project.BoardColumnsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(boardcolumn.FieldID, field.TypeString),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if n, err = sqlgraph.UpdateNodes(ctx, pu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -543,9 +625,45 @@ func (puo *ProjectUpdateOne) SetUpdatedAt(t time.Time) *ProjectUpdateOne {
 	return puo
 }
 
+// AddBoardColumnIDs adds the "board_columns" edge to the BoardColumn entity by IDs.
+func (puo *ProjectUpdateOne) AddBoardColumnIDs(ids ...string) *ProjectUpdateOne {
+	puo.mutation.AddBoardColumnIDs(ids...)
+	return puo
+}
+
+// AddBoardColumns adds the "board_columns" edges to the BoardColumn entity.
+func (puo *ProjectUpdateOne) AddBoardColumns(b ...*BoardColumn) *ProjectUpdateOne {
+	ids := make([]string, len(b))
+	for i := range b {
+		ids[i] = b[i].ID
+	}
+	return puo.AddBoardColumnIDs(ids...)
+}
+
 // Mutation returns the ProjectMutation object of the builder.
 func (puo *ProjectUpdateOne) Mutation() *ProjectMutation {
 	return puo.mutation
+}
+
+// ClearBoardColumns clears all "board_columns" edges to the BoardColumn entity.
+func (puo *ProjectUpdateOne) ClearBoardColumns() *ProjectUpdateOne {
+	puo.mutation.ClearBoardColumns()
+	return puo
+}
+
+// RemoveBoardColumnIDs removes the "board_columns" edge to BoardColumn entities by IDs.
+func (puo *ProjectUpdateOne) RemoveBoardColumnIDs(ids ...string) *ProjectUpdateOne {
+	puo.mutation.RemoveBoardColumnIDs(ids...)
+	return puo
+}
+
+// RemoveBoardColumns removes "board_columns" edges to BoardColumn entities.
+func (puo *ProjectUpdateOne) RemoveBoardColumns(b ...*BoardColumn) *ProjectUpdateOne {
+	ids := make([]string, len(b))
+	for i := range b {
+		ids[i] = b[i].ID
+	}
+	return puo.RemoveBoardColumnIDs(ids...)
 }
 
 // Where appends a list predicates to the ProjectUpdate builder.
@@ -711,6 +829,51 @@ func (puo *ProjectUpdateOne) sqlSave(ctx context.Context) (_node *Project, err e
 	}
 	if value, ok := puo.mutation.UpdatedAt(); ok {
 		_spec.SetField(project.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if puo.mutation.BoardColumnsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   project.BoardColumnsTable,
+			Columns: []string{project.BoardColumnsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(boardcolumn.FieldID, field.TypeString),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := puo.mutation.RemovedBoardColumnsIDs(); len(nodes) > 0 && !puo.mutation.BoardColumnsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   project.BoardColumnsTable,
+			Columns: []string{project.BoardColumnsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(boardcolumn.FieldID, field.TypeString),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := puo.mutation.BoardColumnsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   project.BoardColumnsTable,
+			Columns: []string{project.BoardColumnsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(boardcolumn.FieldID, field.TypeString),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &Project{config: puo.config}
 	_spec.Assign = _node.assignValues

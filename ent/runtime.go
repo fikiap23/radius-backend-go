@@ -5,6 +5,7 @@ package ent
 import (
 	"time"
 
+	"github.com/radius/radius-backend/ent/boardcolumn"
 	"github.com/radius/radius-backend/ent/project"
 	"github.com/radius/radius-backend/ent/schema"
 	"github.com/radius/radius-backend/ent/user"
@@ -17,6 +18,40 @@ import (
 // (default values, validators, hooks and policies) and stitches it
 // to their package variables.
 func init() {
+	boardcolumnFields := schema.BoardColumn{}.Fields()
+	_ = boardcolumnFields
+	// boardcolumnDescTitle is the schema descriptor for title field.
+	boardcolumnDescTitle := boardcolumnFields[2].Descriptor()
+	// boardcolumn.TitleValidator is a validator for the "title" field. It is called by the builders before save.
+	boardcolumn.TitleValidator = boardcolumnDescTitle.Validators[0].(func(string) error)
+	// boardcolumnDescStatus is the schema descriptor for status field.
+	boardcolumnDescStatus := boardcolumnFields[3].Descriptor()
+	// boardcolumn.StatusValidator is a validator for the "status" field. It is called by the builders before save.
+	boardcolumn.StatusValidator = boardcolumnDescStatus.Validators[0].(func(string) error)
+	// boardcolumnDescWipLimit is the schema descriptor for wip_limit field.
+	boardcolumnDescWipLimit := boardcolumnFields[4].Descriptor()
+	// boardcolumn.WipLimitValidator is a validator for the "wip_limit" field. It is called by the builders before save.
+	boardcolumn.WipLimitValidator = boardcolumnDescWipLimit.Validators[0].(func(int) error)
+	// boardcolumnDescSortOrder is the schema descriptor for sort_order field.
+	boardcolumnDescSortOrder := boardcolumnFields[5].Descriptor()
+	// boardcolumn.DefaultSortOrder holds the default value on creation for the sort_order field.
+	boardcolumn.DefaultSortOrder = boardcolumnDescSortOrder.Default.(int)
+	// boardcolumn.SortOrderValidator is a validator for the "sort_order" field. It is called by the builders before save.
+	boardcolumn.SortOrderValidator = boardcolumnDescSortOrder.Validators[0].(func(int) error)
+	// boardcolumnDescCreatedAt is the schema descriptor for created_at field.
+	boardcolumnDescCreatedAt := boardcolumnFields[6].Descriptor()
+	// boardcolumn.DefaultCreatedAt holds the default value on creation for the created_at field.
+	boardcolumn.DefaultCreatedAt = boardcolumnDescCreatedAt.Default.(func() time.Time)
+	// boardcolumnDescUpdatedAt is the schema descriptor for updated_at field.
+	boardcolumnDescUpdatedAt := boardcolumnFields[7].Descriptor()
+	// boardcolumn.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	boardcolumn.DefaultUpdatedAt = boardcolumnDescUpdatedAt.Default.(func() time.Time)
+	// boardcolumn.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	boardcolumn.UpdateDefaultUpdatedAt = boardcolumnDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// boardcolumnDescID is the schema descriptor for id field.
+	boardcolumnDescID := boardcolumnFields[0].Descriptor()
+	// boardcolumn.DefaultID holds the default value on creation for the id field.
+	boardcolumn.DefaultID = boardcolumnDescID.Default.(string)
 	projectFields := schema.Project{}.Fields()
 	_ = projectFields
 	// projectDescName is the schema descriptor for name field.

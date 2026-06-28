@@ -11,6 +11,7 @@ import (
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
+	"github.com/radius/radius-backend/ent/boardcolumn"
 	"github.com/radius/radius-backend/ent/predicate"
 	"github.com/radius/radius-backend/ent/project"
 	"github.com/radius/radius-backend/ent/user"
@@ -28,6 +29,7 @@ const (
 	OpUpdateOne = ent.OpUpdateOne
 
 	// Node types.
+	TypeBoardColumn      = "BoardColumn"
 	TypeProject          = "Project"
 	TypeUser             = "User"
 	TypeUserOAuthAccount = "UserOAuthAccount"
@@ -35,32 +37,837 @@ const (
 	TypeWorkspaceMember  = "WorkspaceMember"
 )
 
+// BoardColumnMutation represents an operation that mutates the BoardColumn nodes in the graph.
+type BoardColumnMutation struct {
+	config
+	op             Op
+	typ            string
+	id             *string
+	title          *string
+	status         *string
+	wip_limit      *int
+	addwip_limit   *int
+	sort_order     *int
+	addsort_order  *int
+	created_at     *time.Time
+	updated_at     *time.Time
+	clearedFields  map[string]struct{}
+	project        *string
+	clearedproject bool
+	done           bool
+	oldValue       func(context.Context) (*BoardColumn, error)
+	predicates     []predicate.BoardColumn
+}
+
+var _ ent.Mutation = (*BoardColumnMutation)(nil)
+
+// boardcolumnOption allows management of the mutation configuration using functional options.
+type boardcolumnOption func(*BoardColumnMutation)
+
+// newBoardColumnMutation creates new mutation for the BoardColumn entity.
+func newBoardColumnMutation(c config, op Op, opts ...boardcolumnOption) *BoardColumnMutation {
+	m := &BoardColumnMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeBoardColumn,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withBoardColumnID sets the ID field of the mutation.
+func withBoardColumnID(id string) boardcolumnOption {
+	return func(m *BoardColumnMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *BoardColumn
+		)
+		m.oldValue = func(ctx context.Context) (*BoardColumn, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().BoardColumn.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withBoardColumn sets the old BoardColumn of the mutation.
+func withBoardColumn(node *BoardColumn) boardcolumnOption {
+	return func(m *BoardColumnMutation) {
+		m.oldValue = func(context.Context) (*BoardColumn, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m BoardColumnMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m BoardColumnMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of BoardColumn entities.
+func (m *BoardColumnMutation) SetID(id string) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *BoardColumnMutation) ID() (id string, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *BoardColumnMutation) IDs(ctx context.Context) ([]string, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []string{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().BoardColumn.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetProjectID sets the "project_id" field.
+func (m *BoardColumnMutation) SetProjectID(s string) {
+	m.project = &s
+}
+
+// ProjectID returns the value of the "project_id" field in the mutation.
+func (m *BoardColumnMutation) ProjectID() (r string, exists bool) {
+	v := m.project
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldProjectID returns the old "project_id" field's value of the BoardColumn entity.
+// If the BoardColumn object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *BoardColumnMutation) OldProjectID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldProjectID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldProjectID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldProjectID: %w", err)
+	}
+	return oldValue.ProjectID, nil
+}
+
+// ResetProjectID resets all changes to the "project_id" field.
+func (m *BoardColumnMutation) ResetProjectID() {
+	m.project = nil
+}
+
+// SetTitle sets the "title" field.
+func (m *BoardColumnMutation) SetTitle(s string) {
+	m.title = &s
+}
+
+// Title returns the value of the "title" field in the mutation.
+func (m *BoardColumnMutation) Title() (r string, exists bool) {
+	v := m.title
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTitle returns the old "title" field's value of the BoardColumn entity.
+// If the BoardColumn object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *BoardColumnMutation) OldTitle(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTitle is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTitle requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTitle: %w", err)
+	}
+	return oldValue.Title, nil
+}
+
+// ResetTitle resets all changes to the "title" field.
+func (m *BoardColumnMutation) ResetTitle() {
+	m.title = nil
+}
+
+// SetStatus sets the "status" field.
+func (m *BoardColumnMutation) SetStatus(s string) {
+	m.status = &s
+}
+
+// Status returns the value of the "status" field in the mutation.
+func (m *BoardColumnMutation) Status() (r string, exists bool) {
+	v := m.status
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldStatus returns the old "status" field's value of the BoardColumn entity.
+// If the BoardColumn object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *BoardColumnMutation) OldStatus(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldStatus is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldStatus requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldStatus: %w", err)
+	}
+	return oldValue.Status, nil
+}
+
+// ResetStatus resets all changes to the "status" field.
+func (m *BoardColumnMutation) ResetStatus() {
+	m.status = nil
+}
+
+// SetWipLimit sets the "wip_limit" field.
+func (m *BoardColumnMutation) SetWipLimit(i int) {
+	m.wip_limit = &i
+	m.addwip_limit = nil
+}
+
+// WipLimit returns the value of the "wip_limit" field in the mutation.
+func (m *BoardColumnMutation) WipLimit() (r int, exists bool) {
+	v := m.wip_limit
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldWipLimit returns the old "wip_limit" field's value of the BoardColumn entity.
+// If the BoardColumn object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *BoardColumnMutation) OldWipLimit(ctx context.Context) (v *int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldWipLimit is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldWipLimit requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldWipLimit: %w", err)
+	}
+	return oldValue.WipLimit, nil
+}
+
+// AddWipLimit adds i to the "wip_limit" field.
+func (m *BoardColumnMutation) AddWipLimit(i int) {
+	if m.addwip_limit != nil {
+		*m.addwip_limit += i
+	} else {
+		m.addwip_limit = &i
+	}
+}
+
+// AddedWipLimit returns the value that was added to the "wip_limit" field in this mutation.
+func (m *BoardColumnMutation) AddedWipLimit() (r int, exists bool) {
+	v := m.addwip_limit
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearWipLimit clears the value of the "wip_limit" field.
+func (m *BoardColumnMutation) ClearWipLimit() {
+	m.wip_limit = nil
+	m.addwip_limit = nil
+	m.clearedFields[boardcolumn.FieldWipLimit] = struct{}{}
+}
+
+// WipLimitCleared returns if the "wip_limit" field was cleared in this mutation.
+func (m *BoardColumnMutation) WipLimitCleared() bool {
+	_, ok := m.clearedFields[boardcolumn.FieldWipLimit]
+	return ok
+}
+
+// ResetWipLimit resets all changes to the "wip_limit" field.
+func (m *BoardColumnMutation) ResetWipLimit() {
+	m.wip_limit = nil
+	m.addwip_limit = nil
+	delete(m.clearedFields, boardcolumn.FieldWipLimit)
+}
+
+// SetSortOrder sets the "sort_order" field.
+func (m *BoardColumnMutation) SetSortOrder(i int) {
+	m.sort_order = &i
+	m.addsort_order = nil
+}
+
+// SortOrder returns the value of the "sort_order" field in the mutation.
+func (m *BoardColumnMutation) SortOrder() (r int, exists bool) {
+	v := m.sort_order
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSortOrder returns the old "sort_order" field's value of the BoardColumn entity.
+// If the BoardColumn object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *BoardColumnMutation) OldSortOrder(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSortOrder is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSortOrder requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSortOrder: %w", err)
+	}
+	return oldValue.SortOrder, nil
+}
+
+// AddSortOrder adds i to the "sort_order" field.
+func (m *BoardColumnMutation) AddSortOrder(i int) {
+	if m.addsort_order != nil {
+		*m.addsort_order += i
+	} else {
+		m.addsort_order = &i
+	}
+}
+
+// AddedSortOrder returns the value that was added to the "sort_order" field in this mutation.
+func (m *BoardColumnMutation) AddedSortOrder() (r int, exists bool) {
+	v := m.addsort_order
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetSortOrder resets all changes to the "sort_order" field.
+func (m *BoardColumnMutation) ResetSortOrder() {
+	m.sort_order = nil
+	m.addsort_order = nil
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *BoardColumnMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *BoardColumnMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the BoardColumn entity.
+// If the BoardColumn object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *BoardColumnMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *BoardColumnMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *BoardColumnMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *BoardColumnMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the BoardColumn entity.
+// If the BoardColumn object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *BoardColumnMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *BoardColumnMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// ClearProject clears the "project" edge to the Project entity.
+func (m *BoardColumnMutation) ClearProject() {
+	m.clearedproject = true
+	m.clearedFields[boardcolumn.FieldProjectID] = struct{}{}
+}
+
+// ProjectCleared reports if the "project" edge to the Project entity was cleared.
+func (m *BoardColumnMutation) ProjectCleared() bool {
+	return m.clearedproject
+}
+
+// ProjectIDs returns the "project" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// ProjectID instead. It exists only for internal usage by the builders.
+func (m *BoardColumnMutation) ProjectIDs() (ids []string) {
+	if id := m.project; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetProject resets all changes to the "project" edge.
+func (m *BoardColumnMutation) ResetProject() {
+	m.project = nil
+	m.clearedproject = false
+}
+
+// Where appends a list predicates to the BoardColumnMutation builder.
+func (m *BoardColumnMutation) Where(ps ...predicate.BoardColumn) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the BoardColumnMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *BoardColumnMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.BoardColumn, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *BoardColumnMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *BoardColumnMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (BoardColumn).
+func (m *BoardColumnMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *BoardColumnMutation) Fields() []string {
+	fields := make([]string, 0, 7)
+	if m.project != nil {
+		fields = append(fields, boardcolumn.FieldProjectID)
+	}
+	if m.title != nil {
+		fields = append(fields, boardcolumn.FieldTitle)
+	}
+	if m.status != nil {
+		fields = append(fields, boardcolumn.FieldStatus)
+	}
+	if m.wip_limit != nil {
+		fields = append(fields, boardcolumn.FieldWipLimit)
+	}
+	if m.sort_order != nil {
+		fields = append(fields, boardcolumn.FieldSortOrder)
+	}
+	if m.created_at != nil {
+		fields = append(fields, boardcolumn.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, boardcolumn.FieldUpdatedAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *BoardColumnMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case boardcolumn.FieldProjectID:
+		return m.ProjectID()
+	case boardcolumn.FieldTitle:
+		return m.Title()
+	case boardcolumn.FieldStatus:
+		return m.Status()
+	case boardcolumn.FieldWipLimit:
+		return m.WipLimit()
+	case boardcolumn.FieldSortOrder:
+		return m.SortOrder()
+	case boardcolumn.FieldCreatedAt:
+		return m.CreatedAt()
+	case boardcolumn.FieldUpdatedAt:
+		return m.UpdatedAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *BoardColumnMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case boardcolumn.FieldProjectID:
+		return m.OldProjectID(ctx)
+	case boardcolumn.FieldTitle:
+		return m.OldTitle(ctx)
+	case boardcolumn.FieldStatus:
+		return m.OldStatus(ctx)
+	case boardcolumn.FieldWipLimit:
+		return m.OldWipLimit(ctx)
+	case boardcolumn.FieldSortOrder:
+		return m.OldSortOrder(ctx)
+	case boardcolumn.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case boardcolumn.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown BoardColumn field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *BoardColumnMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case boardcolumn.FieldProjectID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetProjectID(v)
+		return nil
+	case boardcolumn.FieldTitle:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTitle(v)
+		return nil
+	case boardcolumn.FieldStatus:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetStatus(v)
+		return nil
+	case boardcolumn.FieldWipLimit:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetWipLimit(v)
+		return nil
+	case boardcolumn.FieldSortOrder:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSortOrder(v)
+		return nil
+	case boardcolumn.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case boardcolumn.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown BoardColumn field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *BoardColumnMutation) AddedFields() []string {
+	var fields []string
+	if m.addwip_limit != nil {
+		fields = append(fields, boardcolumn.FieldWipLimit)
+	}
+	if m.addsort_order != nil {
+		fields = append(fields, boardcolumn.FieldSortOrder)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *BoardColumnMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case boardcolumn.FieldWipLimit:
+		return m.AddedWipLimit()
+	case boardcolumn.FieldSortOrder:
+		return m.AddedSortOrder()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *BoardColumnMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case boardcolumn.FieldWipLimit:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddWipLimit(v)
+		return nil
+	case boardcolumn.FieldSortOrder:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddSortOrder(v)
+		return nil
+	}
+	return fmt.Errorf("unknown BoardColumn numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *BoardColumnMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(boardcolumn.FieldWipLimit) {
+		fields = append(fields, boardcolumn.FieldWipLimit)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *BoardColumnMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *BoardColumnMutation) ClearField(name string) error {
+	switch name {
+	case boardcolumn.FieldWipLimit:
+		m.ClearWipLimit()
+		return nil
+	}
+	return fmt.Errorf("unknown BoardColumn nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *BoardColumnMutation) ResetField(name string) error {
+	switch name {
+	case boardcolumn.FieldProjectID:
+		m.ResetProjectID()
+		return nil
+	case boardcolumn.FieldTitle:
+		m.ResetTitle()
+		return nil
+	case boardcolumn.FieldStatus:
+		m.ResetStatus()
+		return nil
+	case boardcolumn.FieldWipLimit:
+		m.ResetWipLimit()
+		return nil
+	case boardcolumn.FieldSortOrder:
+		m.ResetSortOrder()
+		return nil
+	case boardcolumn.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case boardcolumn.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown BoardColumn field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *BoardColumnMutation) AddedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.project != nil {
+		edges = append(edges, boardcolumn.EdgeProject)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *BoardColumnMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case boardcolumn.EdgeProject:
+		if id := m.project; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *BoardColumnMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 1)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *BoardColumnMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *BoardColumnMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.clearedproject {
+		edges = append(edges, boardcolumn.EdgeProject)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *BoardColumnMutation) EdgeCleared(name string) bool {
+	switch name {
+	case boardcolumn.EdgeProject:
+		return m.clearedproject
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *BoardColumnMutation) ClearEdge(name string) error {
+	switch name {
+	case boardcolumn.EdgeProject:
+		m.ClearProject()
+		return nil
+	}
+	return fmt.Errorf("unknown BoardColumn unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *BoardColumnMutation) ResetEdge(name string) error {
+	switch name {
+	case boardcolumn.EdgeProject:
+		m.ResetProject()
+		return nil
+	}
+	return fmt.Errorf("unknown BoardColumn edge %s", name)
+}
+
 // ProjectMutation represents an operation that mutates the Project nodes in the graph.
 type ProjectMutation struct {
 	config
-	op               Op
-	typ              string
-	id               *string
-	name             *string
-	description      *string
-	icon             *string
-	cover            *project.Cover
-	cover_image_url  *string
-	status           *project.Status
-	is_favorite      *bool
-	archived_at      *time.Time
-	open_tasks       *int
-	addopen_tasks    *int
-	progress         *int
-	addprogress      *int
-	created_at       *time.Time
-	updated_at       *time.Time
-	clearedFields    map[string]struct{}
-	workspace        *string
-	clearedworkspace bool
-	done             bool
-	oldValue         func(context.Context) (*Project, error)
-	predicates       []predicate.Project
+	op                   Op
+	typ                  string
+	id                   *string
+	name                 *string
+	description          *string
+	icon                 *string
+	cover                *project.Cover
+	cover_image_url      *string
+	status               *project.Status
+	is_favorite          *bool
+	archived_at          *time.Time
+	open_tasks           *int
+	addopen_tasks        *int
+	progress             *int
+	addprogress          *int
+	created_at           *time.Time
+	updated_at           *time.Time
+	clearedFields        map[string]struct{}
+	workspace            *string
+	clearedworkspace     bool
+	board_columns        map[string]struct{}
+	removedboard_columns map[string]struct{}
+	clearedboard_columns bool
+	done                 bool
+	oldValue             func(context.Context) (*Project, error)
+	predicates           []predicate.Project
 }
 
 var _ ent.Mutation = (*ProjectMutation)(nil)
@@ -741,6 +1548,60 @@ func (m *ProjectMutation) ResetWorkspace() {
 	m.clearedworkspace = false
 }
 
+// AddBoardColumnIDs adds the "board_columns" edge to the BoardColumn entity by ids.
+func (m *ProjectMutation) AddBoardColumnIDs(ids ...string) {
+	if m.board_columns == nil {
+		m.board_columns = make(map[string]struct{})
+	}
+	for i := range ids {
+		m.board_columns[ids[i]] = struct{}{}
+	}
+}
+
+// ClearBoardColumns clears the "board_columns" edge to the BoardColumn entity.
+func (m *ProjectMutation) ClearBoardColumns() {
+	m.clearedboard_columns = true
+}
+
+// BoardColumnsCleared reports if the "board_columns" edge to the BoardColumn entity was cleared.
+func (m *ProjectMutation) BoardColumnsCleared() bool {
+	return m.clearedboard_columns
+}
+
+// RemoveBoardColumnIDs removes the "board_columns" edge to the BoardColumn entity by IDs.
+func (m *ProjectMutation) RemoveBoardColumnIDs(ids ...string) {
+	if m.removedboard_columns == nil {
+		m.removedboard_columns = make(map[string]struct{})
+	}
+	for i := range ids {
+		delete(m.board_columns, ids[i])
+		m.removedboard_columns[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedBoardColumns returns the removed IDs of the "board_columns" edge to the BoardColumn entity.
+func (m *ProjectMutation) RemovedBoardColumnsIDs() (ids []string) {
+	for id := range m.removedboard_columns {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// BoardColumnsIDs returns the "board_columns" edge IDs in the mutation.
+func (m *ProjectMutation) BoardColumnsIDs() (ids []string) {
+	for id := range m.board_columns {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetBoardColumns resets all changes to the "board_columns" edge.
+func (m *ProjectMutation) ResetBoardColumns() {
+	m.board_columns = nil
+	m.clearedboard_columns = false
+	m.removedboard_columns = nil
+}
+
 // Where appends a list predicates to the ProjectMutation builder.
 func (m *ProjectMutation) Where(ps ...predicate.Project) {
 	m.predicates = append(m.predicates, ps...)
@@ -1126,9 +1987,12 @@ func (m *ProjectMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *ProjectMutation) AddedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 2)
 	if m.workspace != nil {
 		edges = append(edges, project.EdgeWorkspace)
+	}
+	if m.board_columns != nil {
+		edges = append(edges, project.EdgeBoardColumns)
 	}
 	return edges
 }
@@ -1141,27 +2005,47 @@ func (m *ProjectMutation) AddedIDs(name string) []ent.Value {
 		if id := m.workspace; id != nil {
 			return []ent.Value{*id}
 		}
+	case project.EdgeBoardColumns:
+		ids := make([]ent.Value, 0, len(m.board_columns))
+		for id := range m.board_columns {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *ProjectMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 2)
+	if m.removedboard_columns != nil {
+		edges = append(edges, project.EdgeBoardColumns)
+	}
 	return edges
 }
 
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
 func (m *ProjectMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	case project.EdgeBoardColumns:
+		ids := make([]ent.Value, 0, len(m.removedboard_columns))
+		for id := range m.removedboard_columns {
+			ids = append(ids, id)
+		}
+		return ids
+	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *ProjectMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 2)
 	if m.clearedworkspace {
 		edges = append(edges, project.EdgeWorkspace)
+	}
+	if m.clearedboard_columns {
+		edges = append(edges, project.EdgeBoardColumns)
 	}
 	return edges
 }
@@ -1172,6 +2056,8 @@ func (m *ProjectMutation) EdgeCleared(name string) bool {
 	switch name {
 	case project.EdgeWorkspace:
 		return m.clearedworkspace
+	case project.EdgeBoardColumns:
+		return m.clearedboard_columns
 	}
 	return false
 }
@@ -1193,6 +2079,9 @@ func (m *ProjectMutation) ResetEdge(name string) error {
 	switch name {
 	case project.EdgeWorkspace:
 		m.ResetWorkspace()
+		return nil
+	case project.EdgeBoardColumns:
+		m.ResetBoardColumns()
 		return nil
 	}
 	return fmt.Errorf("unknown Project edge %s", name)
