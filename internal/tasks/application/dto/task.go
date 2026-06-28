@@ -181,11 +181,11 @@ type CreateTaskInput struct {
 	Body      struct {
 		Title       string              `json:"title" minLength:"1" maxLength:"500"`
 		Description *string             `json:"description,omitempty"`
-		Status      domain.TaskStatus   `json:"status" enum:"backlog,todo,in_progress,review,done"`
-		ColumnID    *string             `json:"columnId,omitempty" format:"uuid"`
-		Priority    domain.TaskPriority `json:"priority" enum:"low,medium,high,urgent"`
-		DueAt       *time.Time          `json:"dueAt"`
-		LabelIDs    []string            `json:"labelIds"`
+		Status      domain.TaskStatus    `json:"status" enum:"backlog,todo,in_progress,review,done"`
+		ColumnID    *string              `json:"columnId,omitempty" format:"uuid"`
+		Priority    *domain.TaskPriority `json:"priority,omitempty" enum:"low,medium,high,urgent"`
+		DueAt       *time.Time           `json:"dueAt,omitempty"`
+		LabelIDs    []string             `json:"labelIds,omitempty"`
 		AssigneeID  *string             `json:"assigneeId,omitempty" format:"uuid"`
 	}
 }
@@ -242,9 +242,9 @@ func (in CreateTaskInput) ToDomain(projectID, workspaceID string) domain.Task {
 	if !status.Valid() {
 		status = domain.TaskStatusTodo
 	}
-	priority := in.Body.Priority
-	if !priority.Valid() {
-		priority = domain.TaskPriorityMedium
+	priority := domain.TaskPriorityMedium
+	if in.Body.Priority != nil && in.Body.Priority.Valid() {
+		priority = *in.Body.Priority
 	}
 	labelIDs := in.Body.LabelIDs
 	if labelIDs == nil {
