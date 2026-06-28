@@ -18,6 +18,7 @@ type BoardColumn struct {
 
 type BoardColumnUpdateData struct {
 	Title    *string
+	Status   *string
 	WipLimit *int
 }
 

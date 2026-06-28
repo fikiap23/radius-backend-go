@@ -48,7 +48,7 @@ type CreateBoardColumnInput struct {
 	Body      struct {
 		Title    string `json:"title" doc:"Column title" minLength:"1" maxLength:"255"`
 		Status   string `json:"status" doc:"Column status slug" minLength:"1" maxLength:"64" pattern:"^[a-z][a-z0-9_]*$"`
-		WipLimit *int   `json:"wipLimit,omitempty" doc:"Work-in-progress limit" minimum:"0"`
+		WipLimit *int   `json:"wipLimit" required:"false" nullable:"true" doc:"Work-in-progress limit" minimum:"0"`
 	}
 }
 
@@ -70,8 +70,9 @@ type UpdateBoardColumnInput struct {
 	ProjectID string `path:"projectId" doc:"Project ID" format:"uuid"`
 	ColumnID  string `path:"columnId" doc:"Board column ID" format:"uuid"`
 	Body      struct {
-		Title    *string `json:"title,omitempty" doc:"Column title" minLength:"1" maxLength:"255"`
-		WipLimit *int    `json:"wipLimit,omitempty" doc:"Work-in-progress limit" minimum:"0"`
+		Title    *string `json:"title,omitempty" required:"false" doc:"Column title" minLength:"1" maxLength:"255"`
+		Status   *string `json:"status,omitempty" required:"false" doc:"Column status slug" minLength:"1" maxLength:"64" pattern:"^[a-z][a-z0-9_]*$"`
+		WipLimit *int    `json:"wipLimit" required:"false" nullable:"true" doc:"Work-in-progress limit" minimum:"0"`
 	}
 }
 
@@ -82,6 +83,10 @@ func (in *UpdateBoardColumnInput) ToDomain() domain.BoardColumnUpdateData {
 	if in.Body.Title != nil {
 		title := strings.TrimSpace(*in.Body.Title)
 		data.Title = &title
+	}
+	if in.Body.Status != nil {
+		status := strings.TrimSpace(*in.Body.Status)
+		data.Status = &status
 	}
 	return data
 }

@@ -85,12 +85,18 @@ func (r *BoardColumnRepository) UpdateByID(ctx context.Context, projectID, colum
 	if data.Title != nil {
 		update = update.SetTitle(*data.Title)
 	}
+	if data.Status != nil {
+		update = update.SetStatus(*data.Status)
+	}
 	if data.WipLimit != nil {
 		update = update.SetWipLimit(*data.WipLimit)
 	}
 
 	n, err := update.Save(ctx)
 	if err != nil {
+		if mapped := mapBoardColumnSaveError(err); mapped != err {
+			return mapped
+		}
 		return fmt.Errorf("update board column: %w", err)
 	}
 	if n == 0 {

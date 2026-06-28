@@ -94,6 +94,9 @@ func (s *BoardColumnService) HandleUpdateColumn(
 		if errors.Is(err, domain.ErrBoardColumnNotFound) {
 			return nil, domain.ErrBoardColumnNotFound
 		}
+		if errors.Is(err, domain.ErrBoardColumnStatusExists) {
+			return nil, domain.ErrBoardColumnStatusExists
+		}
 		return nil, fmt.Errorf("update board column: %w", err)
 	}
 
