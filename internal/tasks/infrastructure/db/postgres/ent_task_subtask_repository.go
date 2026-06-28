@@ -45,20 +45,27 @@ func (r *TaskSubtaskRepository) ReplaceAll(ctx context.Context, taskID string, i
 	keep := make(map[string]struct{}, len(items))
 	for _, item := range items {
 		if item.ID != "" {
-			if _, ok := existingByID[item.ID]; !ok {
-				return fmt.Errorf("subtask %s not found for task %s", item.ID, taskID)
+			if _, ok := existingByID[item.ID]; ok {
+				keep[item.ID] = struct{}{}
+				_, err := r.client.TaskSubtask.Update().
+					Where(
+						entsubtask.IDEQ(item.ID),
+						entsubtask.TaskIDEQ(taskID),
+					).
+					SetTitle(item.Title).
+					SetDone(item.Done).
+					Save(ctx)
+				if err != nil {
+					return fmt.Errorf("update subtask %s: %w", item.ID, err)
+				}
+				continue
 			}
+
+			// Client-provided ID not on this task yet (optimistic UI) — create with that ID.
+			item.TaskID = taskID
 			keep[item.ID] = struct{}{}
-			_, err := r.client.TaskSubtask.Update().
-				Where(
-					entsubtask.IDEQ(item.ID),
-					entsubtask.TaskIDEQ(taskID),
-				).
-				SetTitle(item.Title).
-				SetDone(item.Done).
-				Save(ctx)
-			if err != nil {
-				return fmt.Errorf("update subtask %s: %w", item.ID, err)
+			if err := r.create(ctx, item); err != nil {
+				return fmt.Errorf("create subtask %s: %w", item.ID, err)
 			}
 			continue
 		}
@@ -67,12 +74,7 @@ func (r *TaskSubtaskRepository) ReplaceAll(ctx context.Context, taskID string, i
 		item.ID = id
 		item.TaskID = taskID
 		keep[id] = struct{}{}
-		if _, err := r.client.TaskSubtask.Create().
-			SetID(id).
-			SetTaskID(taskID).
-			SetTitle(item.Title).
-			SetDone(item.Done).
-			Save(ctx); err != nil {
+		if err := r.create(ctx, item); err != nil {
 			return fmt.Errorf("create subtask: %w", err)
 		}
 	}
@@ -91,4 +93,14 @@ func (r *TaskSubtaskRepository) ReplaceAll(ctx context.Context, taskID string, i
 		}
 	}
 	return nil
+}
+
+func (r *TaskSubtaskRepository) create(ctx context.Context, item *domain.TaskSubtask) error {
+	_, err := r.client.TaskSubtask.Create().
+		SetID(item.ID).
+		SetTaskID(item.TaskID).
+		SetTitle(item.Title).
+		SetDone(item.Done).
+		Save(ctx)
+	return err
 }

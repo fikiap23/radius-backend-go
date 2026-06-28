@@ -63,18 +63,20 @@ type WorkspacePathInput struct {
 }
 
 type MemberResponse struct {
-	ID          string `json:"id"`
-	WorkspaceID string `json:"workspaceId"`
-	Name        string `json:"name"`
-	Email       string `json:"email"`
-	Role        string `json:"role"`
-	Status      string `json:"status"`
+	ID          string  `json:"id"`
+	WorkspaceID string  `json:"workspaceId"`
+	UserID      *string `json:"userId,omitempty"`
+	Name        string  `json:"name"`
+	Email       string  `json:"email"`
+	Role        string  `json:"role"`
+	Status      string  `json:"status"`
 }
 
 func MapMember(m *domain.WorkspaceMember) MemberResponse {
 	return MemberResponse{
 		ID:          m.ID,
 		WorkspaceID: m.WorkspaceID,
+		UserID:      m.UserID,
 		Name:        m.Name,
 		Email:       m.Email,
 		Role:        string(m.Role),

@@ -45,20 +45,27 @@ func (r *TaskChecklistItemRepository) ReplaceAll(ctx context.Context, taskID str
 	keep := make(map[string]struct{}, len(items))
 	for _, item := range items {
 		if item.ID != "" {
-			if _, ok := existingByID[item.ID]; !ok {
-				return fmt.Errorf("checklist item %s not found for task %s", item.ID, taskID)
+			if _, ok := existingByID[item.ID]; ok {
+				keep[item.ID] = struct{}{}
+				_, err := r.client.TaskChecklistItem.Update().
+					Where(
+						entchecklist.IDEQ(item.ID),
+						entchecklist.TaskIDEQ(taskID),
+					).
+					SetText(item.Text).
+					SetChecked(item.Checked).
+					Save(ctx)
+				if err != nil {
+					return fmt.Errorf("update checklist item %s: %w", item.ID, err)
+				}
+				continue
 			}
+
+			// Client-provided ID not on this task yet (optimistic UI) — create with that ID.
+			item.TaskID = taskID
 			keep[item.ID] = struct{}{}
-			_, err := r.client.TaskChecklistItem.Update().
-				Where(
-					entchecklist.IDEQ(item.ID),
-					entchecklist.TaskIDEQ(taskID),
-				).
-				SetText(item.Text).
-				SetChecked(item.Checked).
-				Save(ctx)
-			if err != nil {
-				return fmt.Errorf("update checklist item %s: %w", item.ID, err)
+			if err := r.create(ctx, item); err != nil {
+				return fmt.Errorf("create checklist item %s: %w", item.ID, err)
 			}
 			continue
 		}
@@ -67,12 +74,7 @@ func (r *TaskChecklistItemRepository) ReplaceAll(ctx context.Context, taskID str
 		item.ID = id
 		item.TaskID = taskID
 		keep[id] = struct{}{}
-		if _, err := r.client.TaskChecklistItem.Create().
-			SetID(id).
-			SetTaskID(taskID).
-			SetText(item.Text).
-			SetChecked(item.Checked).
-			Save(ctx); err != nil {
+		if err := r.create(ctx, item); err != nil {
 			return fmt.Errorf("create checklist item: %w", err)
 		}
 	}
@@ -91,4 +93,14 @@ func (r *TaskChecklistItemRepository) ReplaceAll(ctx context.Context, taskID str
 		}
 	}
 	return nil
+}
+
+func (r *TaskChecklistItemRepository) create(ctx context.Context, item *domain.TaskChecklistItem) error {
+	_, err := r.client.TaskChecklistItem.Create().
+		SetID(item.ID).
+		SetTaskID(item.TaskID).
+		SetText(item.Text).
+		SetChecked(item.Checked).
+		Save(ctx)
+	return err
 }
