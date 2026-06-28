@@ -31,7 +31,7 @@ help:
 	@echo "  make ent-generate   - Regenerate Ent client (Docker)"
 	@echo "  make ent-clean      - Remove generated Ent client + SQL migrations (keeps schema)"
 	@echo "  make gen-module     - Scaffold bounded context (NAME=... required)"
-	@echo "  (Ent guide: docs/ENT.md)"
+	@echo "  (Module guide: docs/MODULE.md | Ent guide: docs/ENT.md)"
 	@echo ""
 	@echo "  make clean          - Remove build artifacts"
 
