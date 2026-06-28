@@ -1,0 +1,44 @@
+package {{MODULE}}
+
+import (
+	"context"
+
+	"github.com/danielgtaylor/huma/v2"
+	"github.com/labstack/echo/v4"
+	"github.com/radius/radius-backend/internal/module"
+	"github.com/radius/radius-backend/internal/shared/middleware"
+	"github.com/radius/radius-backend/internal/{{MODULE}}/application/services"
+	"github.com/radius/radius-backend/internal/{{MODULE}}/interface/api/rest"
+)
+
+type Module struct {
+	{{MODULE}}Svc *services.{{PASCAL}}Service
+}
+
+func NewModule() *Module {
+	return &Module{}
+}
+
+func (m *Module) Name() string {
+	return "{{MODULE}}"
+}
+
+func (m *Module) wire(deps module.Dependencies) {
+	if m.{{MODULE}}Svc != nil {
+		return
+	}
+
+	// TODO: wire repositories from postgres.New*Repository(deps.Ent)
+	m.{{MODULE}}Svc = services.New{{PASCAL}}Service(deps.Logger)
+}
+
+func (m *Module) RegisterHTTP(_ *echo.Echo, api huma.API, deps module.Dependencies, _ *middleware.AuthMiddleware) {
+	m.wire(deps)
+	rest.Register{{PASCAL}}(api, m.{{MODULE}}Svc, deps.Logger)
+}
+
+func (m *Module) StartMessaging(_ context.Context, _ module.Dependencies) (func(), error) {
+	return nil, nil
+}
+
+var _ module.BoundedContext = (*Module)(nil)

@@ -1,4 +1,4 @@
-.PHONY: help build run test tidy fmt up down restart logs exec migrate migrate-hash migrate-diff ent-generate ent-clean clean
+.PHONY: help build run test tidy fmt up down restart logs exec migrate migrate-hash migrate-diff ent-generate ent-clean gen-module clean
 
 DEV_DB := radius_dev
 
@@ -30,6 +30,7 @@ help:
 	@echo "  make migrate-diff   - Generate SQL migration from Ent schema (NAME=... required, Docker)"
 	@echo "  make ent-generate   - Regenerate Ent client (Docker)"
 	@echo "  make ent-clean      - Remove generated Ent client + SQL migrations (keeps schema)"
+	@echo "  make gen-module     - Scaffold bounded context (NAME=... required)"
 	@echo "  (Ent guide: docs/ENT.md)"
 	@echo ""
 	@echo "  make clean          - Remove build artifacts"
@@ -91,6 +92,10 @@ migrate:
 
 migrate-hash:
 	$(COMPOSE) run --rm --no-deps migrate migrate hash --dir file:///app/migrations
+
+gen-module:
+	@if [ -z "$(NAME)" ]; then echo "usage: make gen-module NAME=<module_name>"; exit 1; fi
+	@./scripts/gen-module.sh "$(NAME)"
 
 # Generate Atlas SQL from ent/schema. Starts Postgres, ensures radius_dev, runs diff in app container.
 migrate-diff: ent-generate

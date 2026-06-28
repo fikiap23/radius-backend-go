@@ -23,6 +23,7 @@ import (
 	"github.com/radius/radius-backend/internal/projects"
 	"github.com/radius/radius-backend/internal/storage"
 	storageminio "github.com/radius/radius-backend/internal/storage/infrastructure/minio"
+	"github.com/radius/radius-backend/internal/demo"
 	"github.com/radius/radius-backend/internal/users"
 	"github.com/radius/radius-backend/internal/workspaces"
 	"go.uber.org/zap"
@@ -84,6 +85,7 @@ func Run() error {
 		users.NewModule(),
 		workspaces.NewModule(),
 		projects.NewModule(),
+		demo.NewModule(),
 		storage.NewModule(),
 	}
 

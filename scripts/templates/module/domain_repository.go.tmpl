@@ -1,0 +1,10 @@
+package domain
+
+import "context"
+
+// {{PASCAL}}Repository persists {{PASCAL}} entities.
+// TODO: implement in infrastructure/db/postgres.
+type {{PASCAL}}Repository interface {
+	// TODO: add repository methods.
+	FindByID(ctx context.Context, id string) (*{{PASCAL}}, error)
+}

@@ -1,0 +1,27 @@
+package rest
+
+import (
+	"context"
+	"net/http"
+
+	"github.com/danielgtaylor/huma/v2"
+	"github.com/radius/radius-backend/internal/shared/humaapi"
+	"github.com/radius/radius-backend/internal/{{MODULE}}/application/services"
+	"go.uber.org/zap"
+)
+
+func Register{{PASCAL}}(api huma.API, svc *services.{{PASCAL}}Service, logger *zap.Logger) {
+	huma.Register(api, huma.Operation{
+		OperationID: "{{MODULE}}-hello",
+		Method:      http.MethodGet,
+		Path:        "/{{MODULE_PATH}}/hello",
+		Summary:     "Hello from {{MODULE}}",
+		Tags:        []string{"{{MODULE}}"},
+	}, func(ctx context.Context, _ *struct{}) (*humaapi.OKOutput, error) {
+		out, err := svc.HandleHello(ctx)
+		if err != nil {
+			return nil, humaapi.MapError(err, nil, logger)
+		}
+		return humaapi.OK(out), nil
+	})
+}

@@ -1,0 +1,23 @@
+package services
+
+import (
+	"context"
+
+	"github.com/radius/radius-backend/internal/{{MODULE}}/application/dto"
+	"go.uber.org/zap"
+)
+
+type {{PASCAL}}Service struct {
+	logger *zap.Logger
+}
+
+func New{{PASCAL}}Service(logger *zap.Logger) *{{PASCAL}}Service {
+	return &{{PASCAL}}Service{
+		logger: logger,
+	}
+}
+
+func (s *{{PASCAL}}Service) HandleHello(_ context.Context) (dto.HelloResponse, error) {
+	// TODO: replace with real use case logic.
+	return dto.HelloResponse{Message: "hello world"}, nil
+}
